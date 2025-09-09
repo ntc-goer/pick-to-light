@@ -38,6 +38,7 @@ CREATE TABLE cart_items (
     cart_id UUID NOT NULL REFERENCES carts(id) ON DELETE CASCADE,
     product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
     quantity INT NOT NULL CHECK (quantity > 0),
+    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
 );
 
 -- Order table

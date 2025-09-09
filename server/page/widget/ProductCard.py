@@ -4,11 +4,12 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton
 
 
 class ProductCard(QWidget):
-    def __init__(self, id, title, image_path):
+    def __init__(self, id, title, image_path, add_to_cart):
         super().__init__()
         self.id = id
         self.image_path = image_path
         self.title = title
+        self.add_to_cart = add_to_cart
 
         # Layout for the card
         layout = QVBoxLayout(self)
@@ -49,4 +50,4 @@ class ProductCard(QWidget):
         layout.addWidget(add_button)
 
     def on_add_to_cart(self):
-        print("on_add_to_cart")
+        self.add_to_cart(self.id)

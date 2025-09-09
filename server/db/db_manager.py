@@ -39,6 +39,81 @@ class DatabaseManager:
         self.cursor.execute("INSERT INTO products (name, price) VALUES (%s, %s)", (name, price))
         self.conn.commit()
 
+    def create_cart_item(self, cart_id, product_id, quantity):
+        query = """
+                INSERT INTO cart_items (cart_id, product_id, quantity)
+                VALUES (%s, %s, %s) RETURNING id, cart_id, product_id, quantity \
+                """
+        with self.conn.cursor() as cur:
+            cur.execute(query, (cart_id, product_id, quantity))
+            self.conn.commit()
+
+    def get_cart_items(self, cart_id):
+        query = """
+                SELECT 
+                    ci.id,
+                    ci.product_id,
+                    p.product_name,
+                    p.product_image,
+                    p.price,
+                    ci.quantity
+                FROM cart_items ci
+                JOIN products p ON ci.product_id = p.id
+                WHERE ci.cart_id = %s
+                ORDER BY ci.created_at DESC
+                """
+        with self.conn.cursor() as cur:
+            cur.execute(query, (cart_id,))
+            rows = cur.fetchall()
+            if not rows:
+                return []
+            result = [
+                {
+                    "id": r[0],
+                    "product_id": r[1],
+                    "product_name": r[2],
+                    "product_image": r[3],
+                    "price": r[4],
+                    "quantity": r[5],
+                }
+                for r in rows
+            ]
+        return result
+
+    def update_cart_item_quantity(self, cart_item_id, quantity):
+        if quantity <= 0:
+            query = """
+                    DELETE \
+                    FROM cart_items
+                    WHERE id = %s
+                    """
+            with self.conn.cursor() as cur:
+                cur.execute(query, cart_item_id)
+                self.conn.commit()
+
+        query = """
+                UPDATE cart_items
+                SET quantity = %s
+                WHERE id = %s
+                """
+        with self.conn.cursor() as cur:
+            cur.execute(query, (quantity, cart_item_id))
+            self.conn.commit()
+
+    def get_cart_item(self, cart_id, product_id):
+        query = """SELECT id, cart_id, product_id, quantity
+                   FROM cart_items
+                   WHERE cart_id = %s AND product_id = %s"""
+        with self.conn.cursor() as cur:
+            cur.execute(query, (cart_id,product_id))
+            row = cur.fetchone()
+            if row is None:
+                return None
+            # convert to list of dict
+            result = {"id": row[0], "cart_id": row[1], "product_id": row[2], "quantity": row[3],}
+
+            return result
+
     def get_products_by_category(self, category_id):
         query = """SELECT id, product_name, product_image, price, stock 
                    FROM products
@@ -46,13 +121,12 @@ class DatabaseManager:
         with self.conn.cursor() as cur:
             cur.execute(query, (category_id,))
             rows = cur.fetchall()
-            print(rows)
             # convert to list of dict
             result = [
                 {"id": r[0], "product_name": r[1], "product_image": r[2], "price": r[3], "stock": r[4]}
                 for r in rows
             ]
-        return result
+            return result
 
     def close(self):
         self.cursor.close()
