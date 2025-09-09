@@ -4,8 +4,11 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLabel, QPushButton
 
 
 class ProductCard(QWidget):
-    def __init__(self, image_path, title):
+    def __init__(self, id, title, image_path):
         super().__init__()
+        self.id = id
+        self.image_path = image_path
+        self.title = title
 
         # Layout for the card
         layout = QVBoxLayout(self)

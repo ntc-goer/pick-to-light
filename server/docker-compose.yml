@@ -1,0 +1,13 @@
+name: ptl-service
+services:
+  db:
+    container_name: server_db
+    image: postgres:17.5
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./postgres:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_PASSWORD=12345
+      - POSTGRES_USER=user
+      - POSTGRES_DB=server_db
