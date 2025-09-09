@@ -44,8 +44,7 @@ CREATE TABLE cart_items (
 -- Order table
 CREATE TABLE orders (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
-    quantity INT NOT NULL,
+    user_id UUID NOT NULL,
     created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
 );
 

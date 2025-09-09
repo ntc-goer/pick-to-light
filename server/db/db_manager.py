@@ -39,6 +39,43 @@ class DatabaseManager:
         self.cursor.execute("INSERT INTO products (name, price) VALUES (%s, %s)", (name, price))
         self.conn.commit()
 
+    def create_order_item(self, order_id, product_id, quantity, price):
+        query = """
+                INSERT INTO order_items (order_id, product_id, quantity, price)
+                VALUES (%s, %s, %s, %s)
+                """
+        with self.conn.cursor() as cur:
+            cur.execute(query, (order_id, product_id, quantity, price))
+            self.conn.commit()
+
+    def delete_cart(self, cart_id):
+        query = """
+                DELETE \
+                FROM carts
+                WHERE id = %s RETURNING id \
+                """
+        with self.conn.cursor() as cur:
+            cur.execute(query, (cart_id,))
+            self.conn.commit()
+
+    def create_order(self, user_id):
+        query = """
+                INSERT INTO orders (user_id)
+                VALUES (%s) RETURNING id, user_id, created_at \
+                """
+        with self.conn.cursor() as cur:
+            cur.execute(query, (user_id,))
+            row = cur.fetchone()
+            self.conn.commit()
+
+            if row:
+                return {
+                    "id": row[0],
+                    "user_id": row[1],
+                    "created_at": row[2],
+                }
+            return None
+
     def create_cart_item(self, cart_id, product_id, quantity):
         query = """
                 INSERT INTO cart_items (cart_id, product_id, quantity)

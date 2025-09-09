@@ -71,7 +71,27 @@ class CreateOrderPage(QWidget):
         layout.setRowStretch(1, 1)  # allow product list row to expand
 
     def create_order(self):
-        print("create_order")
+        # Create Order
+        db = get_db()
+        shop_id = os.getenv("SHOP_ID")
+        shop_cart_id = os.getenv("SHOP_CART_ID")
+
+        order = db.create_order(shop_id)
+        if not order:
+            return
+        cart_items = db.get_cart_items(shop_cart_id)
+        if len(cart_items) == 0:
+            return
+        for _, cart_item in enumerate(cart_items):
+            db.create_order_item(
+                order_id=order["id"],
+                product_id=cart_item["product_id"],
+                quantity=cart_item["quantity"],
+                price=cart_item["price"]
+            )
+        # Remove cart
+        db.delete_cart(shop_cart_id)
+        self.load_cart()
 
     def add_to_cart(self, product_id):
         shop_cart_id = os.getenv("SHOP_CART_ID")
@@ -106,10 +126,9 @@ class CreateOrderPage(QWidget):
     def load_product(self, label, category_id):
         title_label = QLabel(label)
         title_label.setStyleSheet("font-size: 18px; font-weight: bold; margin: 10px;")
-
         self.container_layout.addWidget(title_label)
 
-        product_layout = QGridLayout(self.product_container)
+        product_layout = QGridLayout()
         self.container_layout.addLayout(product_layout)
 
         data = get_db().get_products_by_category(category_id)
