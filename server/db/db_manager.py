@@ -85,6 +85,41 @@ class DatabaseManager:
             cur.execute(query, (cart_id, product_id, quantity))
             self.conn.commit()
 
+    def get_order_items_by_order_id(self, order_id):
+        query = """
+                SELECT oi.id, \
+                       oi.order_id, \
+                       oi.product_id, \
+                       oi.quantity, \
+                       oi.price, \
+                       p.product_name, \
+                       p.product_image
+                FROM order_items oi
+                         JOIN products p ON oi.product_id = p.id
+                WHERE oi.order_id = %s
+                ORDER BY oi.id DESC \
+                """
+        with self.conn.cursor() as cur:
+            cur.execute(query, (order_id,))
+            rows = cur.fetchall()
+            if not rows:
+                return []
+
+            # convert to list of dicts
+            result = [
+                {
+                    "id": r[0],
+                    "order_id": r[1],
+                    "product_id": r[2],
+                    "quantity": r[3],
+                    "price": r[4],
+                    "product_name": r[5],
+                    "product_image": r[6],
+                }
+                for r in rows
+            ]
+            return result
+
     def get_cart_items(self, cart_id):
         query = """
                 SELECT 
@@ -164,6 +199,25 @@ class DatabaseManager:
                 for r in rows
             ]
             return result
+
+    def get_orders(self):
+        query = """
+                SELECT id, user_id, created_at
+                FROM orders
+                ORDER BY created_at DESC \
+                """
+        with self.conn.cursor() as cur:
+            cur.execute(query)
+            rows = cur.fetchall()
+
+            orders = []
+            for row in rows:
+                orders.append({
+                    "id": row[0],
+                    "user_id": row[1],
+                    "created_at": row[2],
+                })
+            return orders
 
     def close(self):
         self.cursor.close()

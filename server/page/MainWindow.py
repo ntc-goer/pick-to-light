@@ -1,10 +1,10 @@
-from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QMainWindow, QPushButton, QLabel, QVBoxLayout, QWidget, QStackedWidget
 
 from page.CreateOrderPage import CreateOrderPage
 from page.HomePage import HomePage
 from page.OrderManagementPage import OrderManagementPage
+from page.ProductLocationPage import ProductLocationPage
 
 
 class MainWindow(QMainWindow):
@@ -27,13 +27,15 @@ class MainWindow(QMainWindow):
         self.stacked_widget = QStackedWidget()
         self.setCentralWidget(self.stacked_widget)
 
-        self.homePage = HomePage(self.gotoCreateOrderPage, self.gotoOrderManagePage)
+        self.homePage = HomePage(self.gotoCreateOrderPage, self.gotoOrderManagePage, self.goToProductLocationPage)
         self.createOrderPage = CreateOrderPage(self.gotoHomePage)
         self.orderManagePage = OrderManagementPage(self.gotoHomePage)
+        self.productLocationManagePage = ProductLocationPage(self.gotoHomePage)
 
         self.stacked_widget.addWidget(self.homePage)
         self.stacked_widget.addWidget(self.createOrderPage)
         self.stacked_widget.addWidget(self.orderManagePage)
+        self.stacked_widget.addWidget(self.productLocationManagePage)
 
         self.stacked_widget.setCurrentIndex(0)
 
@@ -45,3 +47,6 @@ class MainWindow(QMainWindow):
 
     def gotoOrderManagePage(self):
         self.stacked_widget.setCurrentIndex(2)
+
+    def goToProductLocationPage(self):
+        self.stacked_widget.setCurrentIndex(3)

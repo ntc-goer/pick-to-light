@@ -5,6 +5,7 @@ from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QWidget, QLabel, QVBoxLayout, QGridLayout, QPushButton, QScrollArea, QToolButton, \
     QSpacerItem, QSizePolicy
 from db.db_manager import get_db
+from page.widget.BackButton import BackButton
 from page.widget.CartItem import CartItem
 from page.widget.ProductCard import ProductCard
 
@@ -17,12 +18,7 @@ class CreateOrderPage(QWidget):
 
         # === Column 1 ===
         # Back button (row 0, col 0)
-        back_button = QToolButton()
-        back_button.setIcon(QIcon("page/images/back.jpg"))  # <- your back icon path
-        back_button.setIconSize(QSize(32, 32))
-        back_button.setToolTip("Go Back")
-        back_button.clicked.connect(goto_home_page)
-        back_button.setStyleSheet("border: none; background: transparent")  # remove button border
+        back_button = BackButton(goto_home_page)
 
         # Scroll area for product list
         product_scroll = QScrollArea()
@@ -43,21 +39,6 @@ class CreateOrderPage(QWidget):
         self.cart_layout = QVBoxLayout(cart_container)
         self.cart_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.load_cart()
-        # Order button
-        order_button = QPushButton("Create Order")
-        order_button.setStyleSheet("""
-           QPushButton {
-               background-color: #4CAF50;
-               color: white;
-               padding: 5px;
-               border-radius: 5px;
-           }
-           QPushButton:hover {
-               background-color: #45a049;
-           }
-       """)
-        order_button.clicked.connect(self.create_order)
-        self.cart_layout.addWidget(order_button)
 
         cart_scroll.setWidget(cart_container)
 
@@ -122,6 +103,22 @@ class CreateOrderPage(QWidget):
                 item["price"],
                 item["quantity"],)
             )
+
+            # Order button
+        order_button = QPushButton("Create Order")
+        order_button.setStyleSheet("""
+            QPushButton {
+                background-color: #4CAF50;
+                color: white;
+                padding: 5px;
+                border-radius: 5px;
+            }
+            QPushButton:hover {
+                background-color: #45a049;
+            }
+        """)
+        order_button.clicked.connect(self.create_order)
+        self.cart_layout.addWidget(order_button)
 
     def load_product(self, label, category_id):
         title_label = QLabel(label)
