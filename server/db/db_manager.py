@@ -39,6 +39,88 @@ class DatabaseManager:
         self.cursor.execute("INSERT INTO products (name, price) VALUES (%s, %s)", (name, price))
         self.conn.commit()
 
+    def get_product_location(self, shelve, row_location, column_location):
+        query = """
+                SELECT id, product_id, shelve, row_location, column_location
+                FROM product_locations
+                WHERE shelve = %s \
+                  AND row_location = %s \
+                  AND column_location = %s LIMIT 1; \
+                """
+        with self.conn.cursor() as cur:
+            cur.execute(query, (shelve, row_location, column_location))
+            row = cur.fetchone()
+            if row is None:
+                return None
+            return {
+                "id": row[0],
+                "product_id": row[1],
+                "shelve": row[2],
+                "row_location": row[3],
+                "column_location": row[4]
+            }
+
+    def get_product_location_by_product_id(self, product_id):
+        query = """
+                SELECT id, product_id, shelve, row_location, column_location
+                FROM product_locations
+                WHERE product_id = %s
+                """
+        with self.conn.cursor() as cur:
+            cur.execute(query, (product_id,))
+            rows = cur.fetchall()
+
+            locations = []
+            for row in rows:
+                locations.append({
+                    "id": row[0],
+                    "product_id": row[1],
+                    "shelve": row[2],
+                    "row_location": row[3],
+                    "column_location": row[4],
+                })
+            return locations
+
+    def upsert_product_location(self, product_id, shelve, row_location, column_location):
+        query = """
+                INSERT INTO product_locations (product_id, shelve, row_location, column_location)
+                VALUES (%s, %s, %s, %s) ON CONFLICT (shelve, row_location, column_location)
+            DO \
+                UPDATE SET product_id = EXCLUDED.product_id; \
+                """
+        with self.conn.cursor() as cur:
+            cur.execute(query, (product_id, shelve, row_location, column_location))
+        self.conn.commit()
+
+    def get_products(self):
+        query = """
+                SELECT id, \
+                       product_name, \
+                       product_image, \
+                       category_id, \
+                       price, \
+                       stock
+                FROM products
+                ORDER BY product_name ASC
+                """
+        with self.conn.cursor() as cur:
+            cur.execute(query)
+            rows = cur.fetchall()
+            if not rows:
+                return []
+            result = [
+                {
+                    "id": r[0],
+                    "product_name": r[1],
+                    "product_image": r[2],
+                    "category_id": r[3],
+                    "price": r[4],
+                    "stock": r[5],
+                }
+                for r in rows
+            ]
+        return result
+
     def create_order_item(self, order_id, product_id, quantity, price):
         query = """
                 INSERT INTO order_items (order_id, product_id, quantity, price)
@@ -87,17 +169,18 @@ class DatabaseManager:
 
     def get_order_items_by_order_id(self, order_id):
         query = """
-                SELECT oi.id, \
-                       oi.order_id, \
-                       oi.product_id, \
-                       oi.quantity, \
-                       oi.price, \
-                       p.product_name, \
+                SELECT oi.id,
+                       oi.order_id,
+                       oi.product_id,
+                       oi.quantity,
+                       oi.price,
+                       p.product_name,
                        p.product_image
-                FROM order_items oi
+                FROM orders o
+                         JOIN order_items oi ON o.id = oi.order_id
                          JOIN products p ON oi.product_id = p.id
-                WHERE oi.order_id = %s
-                ORDER BY oi.id DESC \
+                WHERE o.id = %s
+                ORDER BY oi.id DESC;
                 """
         with self.conn.cursor() as cur:
             cur.execute(query, (order_id,))
@@ -218,6 +301,24 @@ class DatabaseManager:
                     "created_at": row[2],
                 })
             return orders
+
+    def get_order_by_id(self, order_id):
+        query = """
+                SELECT id, user_id, created_at
+                FROM orders
+                WHERE id = %s
+                """
+        with self.conn.cursor() as cur:
+            cur.execute(query, (order_id,))
+            row = cur.fetchone()
+
+            if row:
+                return {
+                    "id": row[0],
+                    "user_id": row[1],
+                    "created_at": row[2],
+                }
+            return None
 
     def close(self):
         self.cursor.close()

@@ -1,3 +1,5 @@
+import os
+
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import QWidget, QGridLayout, QLabel, QVBoxLayout, QHBoxLayout, QPushButton, QFrame
@@ -5,11 +7,14 @@ from PyQt6.QtWidgets import QWidget, QGridLayout, QLabel, QVBoxLayout, QHBoxLayo
 from db.db_manager import get_db
 
 
-class OrderCard(QWidget):
-    def __init__(self, id, created_at):
+class PtlOrderCard(QWidget):
+    def __init__(self, id, created_at, on_ptl, on_show_direction):
         super().__init__()
         self.id = id
         self.created_at = created_at
+        self.on_ptl = on_ptl
+        self.on_show_direction = on_show_direction
+
         self.db = get_db()
 
         layout = QGridLayout(self)
@@ -33,8 +38,13 @@ class OrderCard(QWidget):
 
         # Row 2, Column 2: Features
         feature_layout = QHBoxLayout()
-        feature_layout.addWidget(QPushButton("Print"))
-        feature_layout.addWidget(QPushButton("Show Map"))
+        ptl_button = QPushButton("PTL")
+        ptl_button.clicked.connect(self.on_ptl_btn_clicked)
+        show_direction_button = QPushButton("Show Map")
+        show_direction_button.clicked.connect(self.on_show_direction_clicked)
+
+        feature_layout.addWidget(ptl_button)
+        feature_layout.addWidget(show_direction_button)
         layout.addLayout(feature_layout, 1, 1, 1, 1)
 
         separator = QFrame()
@@ -42,6 +52,11 @@ class OrderCard(QWidget):
         separator.setFrameShadow(QFrame.Shadow.Sunken)
         layout.addWidget(separator, 2, 0, 1, 2)
 
+    def on_ptl_btn_clicked(self):
+        self.on_ptl(self.id)
+
+    def on_show_direction_clicked(self):
+        self.on_show_direction()
 
     def load_order_items(self):
         order_items = self.db.get_order_items_by_order_id(self.id)

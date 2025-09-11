@@ -21,9 +21,10 @@ CREATE TABLE products (
 CREATE TABLE product_locations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
-    shelf INT NOT NULL,
+    shelve VARCHAR(100) NOT NULL,
     row_location VARCHAR(100) NOT NULL,
-    column_location INT NOT NULL
+    column_location INT NOT NULL,
+    CONSTRAINT uq_product_location UNIQUE (shelve, row_location, column_location)
 );
 
 -- Cart table
@@ -48,7 +49,7 @@ CREATE TABLE orders (
     created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT NOW()
 );
 
--- Order Items table
+-- Order Items Table
 CREATE TABLE order_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     order_id UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
