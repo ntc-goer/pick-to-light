@@ -35,13 +35,39 @@ class DatabaseManager:
         )
         self.cursor = self.conn.cursor()
 
+    def drop_all_table(self):
+        self.cursor.execute("""
+                    SELECT tablename
+                    FROM pg_tables
+                    WHERE schemaname = 'public';
+                    """)
+
+        tables = self.cursor.fetchall()
+        print("tables: ", tables)
+        for table in tables:
+            self.cursor.execute(f"DROP TABLE IF EXISTS {table[0]} CASCADE;")
+            print(f"Dropped table: {table[0]}")
+
+
+    def run_script(self, filename):
+        try:
+            print(f"Running script {filename}")
+            with open(filename, "r", encoding="utf-8") as f:
+                sql_code = f.read()
+                for statement in sql_code.split(";"):
+                    stmt = statement.strip()
+                    if stmt:
+                        self.cursor.execute(stmt)
+        except Exception as e:
+            print(f"An unexpected error occurred: {e}")
+
     def insert_product(self, name, price):
         self.cursor.execute("INSERT INTO products (name, price) VALUES (%s, %s)", (name, price))
         self.conn.commit()
 
     def get_product_location(self, shelve, row_location, column_location):
         query = """
-                SELECT id, product_id, shelve, row_location, column_location
+                SELECT id, product_id, shelve, row_location, column_location, module_id
                 FROM product_locations
                 WHERE shelve = %s \
                   AND row_location = %s \
@@ -57,7 +83,8 @@ class DatabaseManager:
                 "product_id": row[1],
                 "shelve": row[2],
                 "row_location": row[3],
-                "column_location": row[4]
+                "column_location": row[4],
+                "module_id": row[5]
             }
 
     def get_product_location_by_product_id(self, product_id):
@@ -81,16 +108,28 @@ class DatabaseManager:
                 })
             return locations
 
-    def upsert_product_location(self, product_id, shelve, row_location, column_location):
+    def upsert_product_location(self, product_id, shelve, row_location, column_location, module_id):
         query = """
-                INSERT INTO product_locations (product_id, shelve, row_location, column_location)
-                VALUES (%s, %s, %s, %s) ON CONFLICT (shelve, row_location, column_location)
-            DO \
-                UPDATE SET product_id = EXCLUDED.product_id; \
+                INSERT INTO product_locations (product_id, shelve, row_location, column_location, module_id)
+                VALUES (%s, %s, %s, %s, %s) ON CONFLICT (shelve, row_location, column_location)
+               DO \
+                UPDATE SET product_id = EXCLUDED.product_id;\
                 """
         with self.conn.cursor() as cur:
-            cur.execute(query, (product_id, shelve, row_location, column_location))
+            cur.execute(query, (product_id, shelve, row_location, column_location, module_id))
         self.conn.commit()
+
+    def upsert_shelve_module_mapping(self, location_id, module_id):
+        query = """
+                INSERT INTO shelve_module_mappings (module_id, product_location_id)
+                VALUES (%s, %s) ON CONFLICT (module_id, product_location_id)
+                       DO \
+                UPDATE SET module_id = EXCLUDED.module_id; \
+                """
+        with self.conn.cursor() as cur:
+            cur.execute(query, (module_id, location_id))
+        self.conn.commit()
+
 
     def get_products(self):
         query = """

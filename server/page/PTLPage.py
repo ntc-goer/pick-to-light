@@ -54,7 +54,7 @@ class PTLPage(QWidget):
 
     def submit_order_id(self):
         self.order_id_input = self.order_id_input.strip()
-        self.load_right_layout()
+        self.load_right_layout(reload=True)
 
     def load_left_layout(self):
         qr_label = QLabel("Scan QR Code")
@@ -96,26 +96,15 @@ class PTLPage(QWidget):
     def on_show_direction(self):
         self.load_map()
 
-    def load_right_layout(self):
+    def load_right_layout(self, reload=False):
         if self.order_id_input == "":
             return
         order = self.db.get_order_by_id(self.order_id_input)
         if order is None:
             self.show_message("Order not found")
+            if reload:
+                self.show_message("Order not found")
             return
-
-        while self.r_layout.count():
-            item = self.r_layout.takeAt(0)
-            widget = item.widget()
-            if widget:
-                widget.deleteLater()
-
-        self.r_layout.addWidget(PtlOrderCard(
-            order["id"],
-            order["created_at"],
-            self.on_ptl,
-            self.on_show_direction
-        ))
 
     def make_spacer(self):
         spacer = QLabel("")

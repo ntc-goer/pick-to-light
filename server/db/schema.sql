@@ -17,20 +17,23 @@ CREATE TABLE products (
     stock DOUBLE PRECISION NOT NULL
 );
 
--- Product Location table
+-- Product location table
 CREATE TABLE product_locations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
     shelve VARCHAR(100) NOT NULL,
     row_location VARCHAR(100) NOT NULL,
     column_location INT NOT NULL,
+    product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    quantity INT,
+    module_id VARCHAR(100) NOT NULL
     CONSTRAINT uq_product_location UNIQUE (shelve, row_location, column_location)
+    CONSTRAINT uq_module_ud UNIQUE module_id
 );
 
 -- Cart table
 CREATE TABLE carts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID,
+    user_id UUID
 );
 
 -- Cart Items table

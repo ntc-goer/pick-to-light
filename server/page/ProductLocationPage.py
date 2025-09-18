@@ -2,7 +2,7 @@ import os
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QWidget, QGridLayout, QScrollArea, QLabel, QVBoxLayout, QComboBox, QStackedWidget, \
-    QPushButton, QListView, QMessageBox
+    QPushButton, QListView, QMessageBox, QLineEdit
 
 from db.db_manager import get_db
 from page.widget.BackButton import BackButton
@@ -17,6 +17,8 @@ class ProductLocationPage(QWidget):
         self.selected_shelve = None
         self.setWindowTitle("Product Location Management")
         self.setGeometry(200, 200, 400, 200)
+        self.cell_module_text = ""
+        self.db = get_db()
 
         # Layout
         layout = QGridLayout(self)
@@ -69,10 +71,9 @@ class ProductLocationPage(QWidget):
         layout.setRowStretch(1, 1)  # allow product list row to expand
 
     def update_cell_location(self):
-        db = get_db()
         product_id = self.product_combo_box.currentData()
-        db.upsert_product_location(product_id, self.selected_shelve, self.selected_row, self.selected_column)
-        self.show_message("Cập nhật vị trí thành công")
+        self.db.upsert_product_location(product_id, self.selected_shelve, self.selected_row, self.selected_column, self.cell_module_text)
+        self.show_message("Update successfully")
 
     def show_message(self, message):
         msg = QMessageBox(self)
@@ -81,6 +82,9 @@ class ProductLocationPage(QWidget):
         msg.setText(message)
         msg.setStandardButtons(QMessageBox.StandardButton.Ok)
         msg.exec()
+
+    def on_module_text_changed(self, text):
+        self.cell_module_text = text
 
     def load_update_cell(self):
         if self.selected_shelve is None:
@@ -96,7 +100,9 @@ class ProductLocationPage(QWidget):
         title_label.setStyleSheet("font-size: 12px; font-weight: bold")
         self.l_edit_v_layout.addWidget(title_label)
 
-        products = get_db().get_products()
+        location = self.db.get_product_location(self.selected_shelve, self.selected_row, self.selected_column)
+
+        products = self.db.get_products()
         self.product_combo_box = QComboBox()
 
         list_view = QListView()
@@ -104,9 +110,31 @@ class ProductLocationPage(QWidget):
 
         self.product_combo_box.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
 
+        select_product_label = QLabel(f"Select product:")
+        select_product_label.setStyleSheet("font-size: 12px; margin-top: 10px;")
+        self.l_edit_v_layout.addWidget(select_product_label)
+
         for _, product in enumerate(products):
             self.product_combo_box.addItem(product["product_name"], product["id"])
+
         self.l_edit_v_layout.addWidget(self.product_combo_box)
+
+        input_module_label = QLabel(f"Input module Id:")
+        input_module_label.setStyleSheet("font-size: 12px; margin-top: 10px;")
+        self.l_edit_v_layout.addWidget(input_module_label)
+
+        input_module_edit = QLineEdit()
+        input_module_edit.setPlaceholderText("MD112")
+        input_module_edit.textChanged.connect(self.on_module_text_changed)
+        self.l_edit_v_layout.addWidget(input_module_edit)
+
+        if location is not None:
+            self.cell_module_text = location["module_id"]
+            input_module_edit.setText(self.cell_module_text)
+
+            index = self.product_combo_box.findData(location["product_id"])
+            if index != -1:
+                self.product_combo_box.setCurrentIndex(index)
 
         edit_button = QPushButton("Update Cell Location")
         edit_button.setStyleSheet("""
@@ -115,6 +143,7 @@ class ProductLocationPage(QWidget):
                         color: white;
                         padding: 5px;
                         border-radius: 5px;
+                        margin-top: 10px;
                     }
                     QPushButton:hover {
                         background-color: #45a049;
@@ -146,7 +175,7 @@ class ProductLocationPage(QWidget):
                 cell.setFlat(True)
                 cell.setStyleSheet("QPushButton { text-align: center; }")
                 # Check Have Product
-                location = get_db().get_product_location(
+                location = self.db.get_product_location(
                     shelve,
                     r,
                     c
