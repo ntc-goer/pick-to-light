@@ -1,17 +1,22 @@
 import os
+import time
 
-from PyQt6.QtCore import Qt
+import cv2
+import imutils
+from PyQt6.QtCore import Qt, QThread, pyqtSignal, pyqtSlot
+from PyQt6.QtGui import QImage, QPixmap
 from PyQt6.QtWidgets import QWidget, QGridLayout, QVBoxLayout, QLabel, QLineEdit, QPushButton, QHBoxLayout, QMessageBox, \
     QSizePolicy
 
 from db.db_manager import get_db
 from page.widget.BackButton import BackButton
+from page.widget.CameraThread import CameraThread
 from page.widget.PtlOrderCard import PtlOrderCard
-
 
 class PTLPage(QWidget):
     def __init__(self, goto_home_page):
         super().__init__()
+        self.scanner_label = None
         self.db = get_db()
 
         # Layout
@@ -39,6 +44,8 @@ class PTLPage(QWidget):
             }
         """)
         self.load_right_layout()
+        self.camera_thread = CameraThread()
+        self.camera_thread.frame_signal.connect(self.set_image)
 
         layout.addWidget(back_button, 0, 0, 1, 2)  # row=0, col=0, span=1x1
         layout.addWidget(self.l_container, 1, 0, 1, 1)
@@ -56,8 +63,33 @@ class PTLPage(QWidget):
         self.order_id_input = self.order_id_input.strip()
         self.load_right_layout(reload=True)
 
+    def open_camera(self):
+        if not hasattr(self, "camera_thread") or not self.camera_thread.isRunning():
+            self.camera_thread = CameraThread()
+            self.camera_thread.frame_signal.connect(self.set_image)
+            self.camera_thread.start()
+
+    def stop_camera(self):
+        if hasattr(self, "camera_thread") and self.camera_thread.isRunning():
+            self.camera_thread.stop()
+            self.camera_thread.deleteLater()
+            self.camera_thread = None
+
+    @pyqtSlot(QImage)
+    def set_image(self, image):
+        pixmap = QPixmap.fromImage(image)
+        pixmap = pixmap.scaled(
+            self.scanner_label.width(),
+            self.scanner_label.height(),
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation
+        )
+        self.scanner_label.setPixmap(pixmap)
+
     def load_left_layout(self):
         qr_label = QLabel("Scan QR Code")
+        self.scanner_label = QLabel()
+        self.scanner_label.setFixedSize(300, 200)
         or_label = QLabel("Or Input Order Id:")
         line_edit = QLineEdit()
         line_edit.setPlaceholderText("9c7227ac-9960-46d9-ba40-1036541b61f3")
@@ -77,10 +109,15 @@ class PTLPage(QWidget):
         """)
         submit_button.clicked.connect(self.submit_order_id)
         self.l_layout.addWidget(qr_label)
+        self.l_layout.addWidget(self.scanner_label)
+
         # addWidget QR
         self.l_layout.addWidget(or_label)
         self.l_layout.addWidget(line_edit)
         self.l_layout.addWidget(submit_button)
+
+        self.open_camera()
+
 
     def show_message(self, message):
         msg = QMessageBox(self)
@@ -224,72 +261,5 @@ class PTLPage(QWidget):
                         1,
                         1
                     )
-
-        # # Calculate map size
-        # total_map_cols = 2 * padding_map + len(shelves) * per_shelf_cols + (len(shelves) - 1) * padding_shelve
-        # total_map_rows = 2 * padding_map + per_shelf_rows
-        #
-        # # --- Top spacer ---
-        # grid.addWidget(self.make_spacer(), 0, 0, padding_map, total_map_cols)
-        # # --- Left spacer ---
-        # grid.addWidget(self.make_spacer(), padding_map, 0, per_shelf_rows, padding_map)
-        # # --- Right spacer ---
-        # grid.addWidget(self.make_spacer(), padding_map, total_map_cols - padding_map, per_shelf_rows, padding_map)
-        # # --- Bottom spacer ---
-        # grid.addWidget(self.make_spacer(), total_map_rows - padding_map, 0, padding_map, total_map_cols)
-        #
-        # # start positions (bắt đầu vẽ kệ từ padding)
-        # start_shelve_row = padding_map
-        #
-        # for shelve_i, shelve in enumerate(shelves):
-        #     shelve_split = shelve.split(" ")
-        #     shelve_name = shelve_split[0][0] + shelve_split[1]
-        #     for row_i, row in enumerate(rows):
-        #         for col_i, col in enumerate(cols):
-        #             btn = QPushButton(f"{shelve_name}-{row}{col}")
-        #             btn.setFlat(True)
-        #             btn.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Minimum)
-        #             default_style = """
-        #                 QPushButton {
-        #                     border: 1px solid #555;
-        #                     background-color: #f9f9f9;
-        #                     min-width: 80px;
-        #                     min-height: 60px;
-        #                     text-align: center;
-        #                 }
-        #             """
-        #
-        #             occupied_style = """
-        #                 QPushButton {
-        #                     border: 1px solid #555;
-        #                     background-color: #fff59d;
-        #                     min-width: 80px;
-        #                     min-height: 60px;
-        #                     text-align: center;
-        #                     font-weight: bold;
-        #                 }
-        #             """
-        #             if f"{shelve}-{row}-{col}" in product_location:
-        #                 btn.setStyleSheet(occupied_style)
-        #             else:
-        #                 btn.setStyleSheet(default_style)
-        #
-        #             grid.addWidget(
-        #                 btn,
-        #                 start_shelve_row + row_i * cell_size,
-        #                 start_shelve_col + col_i * cell_size,
-        #                 cell_size,
-        #                 cell_size
-        #             )
-        #
-        #     if shelve_i < len(shelves) - 1:
-        #         grid.addWidget(
-        #             self.make_spacer(),
-        #             start_shelve_row,
-        #             start_shelve_col + per_shelf_cols,
-        #             per_shelf_rows,
-        #             padding_shelve
-        #         )
-        #     start_shelve_col += per_shelf_cols + padding_shelve
 
         self.r_layout.addWidget(grid_container)
