@@ -14,6 +14,7 @@ if __name__ == '__main__':
     window = MainWindow()
 
     # window.showFullScreen()
+    window.setFixedSize(900, 600)
     window.show()
 
     sys.exit(app.exec())

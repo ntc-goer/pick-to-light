@@ -101,7 +101,6 @@ class PTLPage(QWidget):
             return
         order = self.db.get_order_by_id(self.order_id_input)
         if order is None:
-            self.show_message("Order not found")
             if reload:
                 self.show_message("Order not found")
             return
