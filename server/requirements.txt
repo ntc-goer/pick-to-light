@@ -3,3 +3,4 @@ PyQt6==6.9.1
 psycopg2-binary
 python-dotenv==1.1.1
 opencv-python
+pyserial

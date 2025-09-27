@@ -9,7 +9,7 @@ from page.widget.BackButton import BackButton
 
 
 class ProductLocationPage(QWidget):
-    def __init__(self, goto_home_page):
+    def __init__(self, goto_home_page, arduino = None):
         super().__init__()
         self.product_combo_box = None
         self.selected_column = None
@@ -19,6 +19,7 @@ class ProductLocationPage(QWidget):
         self.setGeometry(200, 200, 400, 200)
         self.cell_module_text = ""
         self.db = get_db()
+        self.arduino = arduino
 
         # Layout
         layout = QGridLayout(self)
@@ -151,6 +152,31 @@ class ProductLocationPage(QWidget):
                 """)
         edit_button.clicked.connect(self.update_cell_location)
         self.l_edit_v_layout.addWidget(edit_button)
+
+        or_label = QLabel("Or")
+        or_label.setStyleSheet("font-size: 12px; font-weight: bold; text-align: center;")
+        self.l_edit_v_layout.addWidget(or_label)
+
+        test_button = QPushButton("Test Light")
+        test_button.setStyleSheet("""
+                            QPushButton {
+                                background-color: #4CAF50;
+                                color: white;
+                                padding: 5px;
+                                border-radius: 5px;
+                                margin-top: 10px;
+                            }
+                            QPushButton:hover {
+                                background-color: #45a049;
+                            }
+                        """)
+        test_button.clicked.connect(self.test_light)
+        self.l_edit_v_layout.addWidget(test_button)
+
+    def test_light(self):
+        print("test_light", self.selected_shelve, self.selected_row, self.selected_column, self.cell_module_text)
+        text = f'{self.selected_shelve}-{self.selected_row}-{self.selected_column}-{self.cell_module_text}'
+        self.arduino.write((text + "\n").encode("utf-8"))
 
     def change_shelve_index(self, index):
         self.page_stack.setCurrentIndex(index)

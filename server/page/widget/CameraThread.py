@@ -1,3 +1,4 @@
+import threading
 import time
 
 import cv2
@@ -9,35 +10,61 @@ from PyQt6.QtGui import QImage
 class CameraThread(QThread):
     frame_signal = pyqtSignal(QImage)
 
+
     def __init__(self):
         super().__init__()
-        self.running = False
+        self._running = False
+
         self.cap = None
 
     def run(self):
-        print("Start capture", time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
-        self.running = True
+        # Set running flag
+        self._running = True
+
+        # Initialize capture *inside* the thread
         self.cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-        while self.cap.isOpened() and self.running:
-            _, frame = self.cap.read()
+        if not (self.cap and self.cap.isOpened()):
+            # Clear flag if camera failed to open
+            self._running = False
+            # Exit the run method early
+            return
+
+        while self._running:
+            ret, frame = self.cap.read()
+
+            # Check the running flag again right after read() returns
+            if not self._running or not ret:
+                break
+
             frame = self.cvimage_to_label(frame)
             self.frame_signal.emit(frame)
-        # cleanup when loop exits
-        if self.cap is not None:
+
+            # Add a small delay to yield control and allow the stop() call to be processed
+            time.sleep(0.01)
+
+        # cleanup
+        if self.cap:
             self.cap.release()
             self.cap = None
-        print("Camera released", time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()))
 
     def cvimage_to_label(self, image):
         image = imutils.resize(image, width=640)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        image = QImage(image,
-                       image.shape[1],
-                       image.shape[0],
-                       QImage.Format.Format_RGB888)
-        return image
+        return QImage(
+            image,
+            image.shape[1],
+            image.shape[0],
+            QImage.Format.Format_RGB888,
+        )
 
     def stop(self):
-        self.running = False
-        self.wait()  # block until thread fully exits
-        time.sleep(0.2)
+        # 1. Clear the running flag (essential for a clean exit)
+        self._running = False
+
+        # 2. Force the blocking 'cap.read()' call to return
+        #    by releasing the camera resource.
+        if self.cap and self.cap.isOpened():
+            self.cap.release()
+
+        # NOTE: You don't need to explicitly call self.quit() or self.wait()
+        # inside the thread class itself; that's done by the caller (main application).

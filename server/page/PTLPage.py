@@ -23,7 +23,7 @@ class PTLPage(QWidget):
         layout = QGridLayout(self)
         self.order_id_input = "06bf7aab-6b0f-47d0-8d13-a8397688f8ad"
 
-        back_button = BackButton(goto_home_page)
+        back_button = BackButton(goto_home_page, after_func=self.stop_camera)
 
         self.l_container = QWidget()
         self.l_layout = QVBoxLayout(self.l_container)
@@ -70,8 +70,10 @@ class PTLPage(QWidget):
             self.camera_thread.start()
 
     def stop_camera(self):
-        if hasattr(self, "camera_thread") and self.camera_thread.isRunning():
+        print("stop camera thread", self.camera_thread)
+        if self.camera_thread:
             self.camera_thread.stop()
+            self.camera_thread.wait()
             self.camera_thread.deleteLater()
             self.camera_thread = None
 
