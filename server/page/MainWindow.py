@@ -10,6 +10,7 @@ from page.HomePage import HomePage
 from page.OrderManagementPage import OrderManagementPage
 from page.PTLPage import PTLPage
 from page.ProductLocationPage import ProductLocationPage
+from page.widget.SerialReaderThread import SerialReaderThread
 
 
 class MainWindow(QMainWindow):
@@ -20,6 +21,8 @@ class MainWindow(QMainWindow):
         baud_rate = os.getenv("SERIAL_BAUD_RATE", 9600)
         self.arduino = serial.Serial(port=port, baudrate=baud_rate, timeout=1)
         # self.arduino = None
+        self.reader = SerialReaderThread(arduino=self.arduino)
+        self.start_listening()
 
         # Config Main Window
         self.setWindowTitle("Warehouse Management")
@@ -52,6 +55,20 @@ class MainWindow(QMainWindow):
     # ----------------------------------------------------------------------
     ## Core Fix: Managing Page Destruction
     # ----------------------------------------------------------------------
+
+    def start_listening(self):
+        if self.reader is not None:
+            self.reader.data_received.connect(self.update_console)
+            self.reader.start()
+
+    def stop_listening(self):
+        if self.reader:
+            self.reader.stop()
+            self.reader.wait()
+            self.reader = None
+
+    def update_console(self, text):
+        print(text)
 
     def stack_change(self, target_index):
         # 1. Clean up the existing widget (if any)
