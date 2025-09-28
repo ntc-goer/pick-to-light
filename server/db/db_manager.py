@@ -112,8 +112,9 @@ class DatabaseManager:
         query = """
                 INSERT INTO product_locations (product_id, shelve, row_location, column_location, module_id)
                 VALUES (%s, %s, %s, %s, %s) ON CONFLICT (shelve, row_location, column_location)
-               DO \
-                UPDATE SET product_id = EXCLUDED.product_id;\
+               DO UPDATE SET
+                    product_id = EXCLUDED.product_id,
+                    module_id = EXCLUDED.module_id;
                 """
         with self.conn.cursor() as cur:
             cur.execute(query, (product_id, shelve, row_location, column_location, module_id))

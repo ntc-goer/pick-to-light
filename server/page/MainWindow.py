@@ -19,6 +19,7 @@ class MainWindow(QMainWindow):
         port = os.getenv("SERIAL_PORT", "COM3")
         baud_rate = os.getenv("SERIAL_BAUD_RATE", 9600)
         self.arduino = serial.Serial(port=port, baudrate=baud_rate, timeout=1)
+        # self.arduino = None
 
         # Config Main Window
         self.setWindowTitle("Warehouse Management")

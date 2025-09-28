@@ -2,7 +2,7 @@ import os
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QWidget, QGridLayout, QScrollArea, QLabel, QVBoxLayout, QComboBox, QStackedWidget, \
-    QPushButton, QListView, QMessageBox, QLineEdit
+    QPushButton, QListView, QMessageBox, QLineEdit, QRadioButton, QButtonGroup
 
 from db.db_manager import get_db
 from page.widget.BackButton import BackButton
@@ -11,6 +11,12 @@ from page.widget.BackButton import BackButton
 class ProductLocationPage(QWidget):
     def __init__(self, goto_home_page, arduino = None):
         super().__init__()
+        self.check_all_mode = False
+        self.test_radio_2 = None
+        self.test_radio_1 = None
+        self.test_radio_3 = None
+        self.test_radio_group = None
+        self.test_quantity_text = None
         self.product_combo_box = None
         self.selected_column = None
         self.selected_row = None
@@ -70,7 +76,10 @@ class ProductLocationPage(QWidget):
         layout.setColumnStretch(0, 8)  # left column
         layout.setColumnStretch(1, 2)  # right column (wider)
         layout.setRowStretch(1, 1)  # allow product list row to expand
-
+    
+    def on_test_quantity_text_changed(self, text):
+        self.test_quantity_text = text
+        
     def update_cell_location(self):
         product_id = self.product_combo_box.currentData()
         self.db.upsert_product_location(product_id, self.selected_shelve, self.selected_row, self.selected_column, self.cell_module_text)
@@ -96,6 +105,22 @@ class ProductLocationPage(QWidget):
             widget = item.widget()
             if widget:
                 widget.deleteLater()
+
+        test_check_all_button = QPushButton("Test All ON/OFF")
+        test_check_all_button.setStyleSheet("""
+                                    QPushButton {
+                                        background-color: #4CAF50;
+                                        color: white;
+                                        padding: 5px;
+                                        border-radius: 5px;
+                                        margin-top: 10px;
+                                    }
+                                    QPushButton:hover {
+                                        background-color: #45a049;
+                                    }
+                                """)
+        test_check_all_button.clicked.connect(self.test_check_all)
+        self.l_edit_v_layout.addWidget(test_check_all_button)
 
         title_label = QLabel(f"Update Cell: {self.selected_shelve}-{self.selected_row}{self.selected_column}")
         title_label.setStyleSheet("font-size: 12px; font-weight: bold")
@@ -157,6 +182,33 @@ class ProductLocationPage(QWidget):
         or_label.setStyleSheet("font-size: 12px; font-weight: bold; text-align: center;")
         self.l_edit_v_layout.addWidget(or_label)
 
+        test_quantity_label = QLabel(f"Quantity:")
+        test_quantity_label.setStyleSheet("font-size: 12px; margin-top: 10px;")
+        self.l_edit_v_layout.addWidget(test_quantity_label)
+
+        test_quantity_edit = QLineEdit()
+        test_quantity_edit.setPlaceholderText("3")
+        test_quantity_edit.textChanged.connect(self.on_test_quantity_text_changed)
+        self.l_edit_v_layout.addWidget(test_quantity_edit)
+
+        test_mode_label = QLabel(f"Mode:")
+        test_mode_label.setStyleSheet("font-size: 12px; margin-top: 10px;")
+        self.l_edit_v_layout.addWidget(test_mode_label)
+
+        self.test_radio_1 = QRadioButton("Off")
+        self.test_radio_2 = QRadioButton("On")
+        self.test_radio_3 = QRadioButton("Blink")
+
+        # nhóm chúng lại -> chỉ chọn được 1
+        self.test_radio_group = QButtonGroup(self)
+        self.test_radio_group.addButton(self.test_radio_1)
+        self.test_radio_group.addButton(self.test_radio_2)
+        self.test_radio_group.addButton(self.test_radio_3)
+
+        self.l_edit_v_layout.addWidget(self.test_radio_1)
+        self.l_edit_v_layout.addWidget(self.test_radio_2)
+        self.l_edit_v_layout.addWidget(self.test_radio_3)
+
         test_button = QPushButton("Test Light")
         test_button.setStyleSheet("""
                             QPushButton {
@@ -173,10 +225,29 @@ class ProductLocationPage(QWidget):
         test_button.clicked.connect(self.test_light)
         self.l_edit_v_layout.addWidget(test_button)
 
+    def test_check_all(self ):
+        self.check_all_mode = not self.check_all_mode
+        if self.check_all_mode:
+            text = "CheckAll"
+        else:
+            text = "OffAll"
+        self.arduino.write((text + "\n").encode())
+
     def test_light(self):
-        print("test_light", self.selected_shelve, self.selected_row, self.selected_column, self.cell_module_text)
-        text = f'{self.selected_shelve}-{self.selected_row}-{self.selected_column}-{self.cell_module_text}'
-        self.arduino.write((text + "\n").encode("utf-8"))
+        # text = "A002B|4|1"
+        text = f"{self.cell_module_text}|{self.test_quantity_text}|{self.get_test_mode()}"
+        print(text)
+        self.arduino.write((text + "\n").encode())
+
+    def get_test_mode(self):
+        if self.test_radio_1.isChecked():
+            return 0
+        elif self.test_radio_2.isChecked():
+            return 1
+        elif self.test_radio_3.isChecked():
+            return 2
+        else:
+            return -1
 
     def change_shelve_index(self, index):
         self.page_stack.setCurrentIndex(index)

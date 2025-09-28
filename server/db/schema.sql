@@ -25,9 +25,9 @@ CREATE TABLE product_locations (
     column_location INT NOT NULL,
     product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
     quantity INT,
-    module_id VARCHAR(100) NOT NULL
-    CONSTRAINT uq_product_location UNIQUE (shelve, row_location, column_location)
-    CONSTRAINT uq_module_ud UNIQUE module_id
+    module_id VARCHAR(100) NOT NULL,
+    CONSTRAINT uq_product_location UNIQUE (shelve, row_location, column_location),
+    CONSTRAINT uq_module_ud UNIQUE (module_id)
 );
 
 -- Cart table
