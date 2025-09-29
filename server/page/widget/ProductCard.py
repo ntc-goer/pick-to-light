@@ -31,22 +31,21 @@ class ProductCard(QWidget):
         # Add to cart button
         add_button = QPushButton("Add to Cart")
         add_button.setStyleSheet("""
-                   QPushButton {
-                       background-color: #4CAF50;
-                       color: white;
-                       padding: 5px;
-                       border-radius: 5px;
-                   }
-                   QPushButton:hover {
-                       background-color: #45a049;
-                   }
-               """)
+               QPushButton {
+                   background-color: #4CAF50;
+                   color: white;
+                   padding: 5px;
+                   border-radius: 5px;
+               }
+               QPushButton:hover {
+                   background-color: #45a049;
+               }
+           """)
         add_button.clicked.connect(self.on_add_to_cart)
 
         # Add widgets to layout
         layout.addWidget(image_label)
         layout.addWidget(title_label)
-        layout.addStretch()
         layout.addWidget(add_button)
 
     def on_add_to_cart(self):

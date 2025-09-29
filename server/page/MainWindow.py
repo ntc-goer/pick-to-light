@@ -10,6 +10,7 @@ from page.HomePage import HomePage
 from page.OrderManagementPage import OrderManagementPage
 from page.PTLPage import PTLPage
 from page.ProductLocationPage import ProductLocationPage
+from page.ProductManagementPage import ProductManagementPage
 from page.widget.SerialReaderThread import SerialReaderThread
 
 
@@ -19,8 +20,8 @@ class MainWindow(QMainWindow):
 
         port = os.getenv("SERIAL_PORT", "COM3")
         baud_rate = os.getenv("SERIAL_BAUD_RATE", 9600)
-        self.arduino = serial.Serial(port=port, baudrate=baud_rate, timeout=1)
-        # self.arduino = None
+        # self.arduino = serial.Serial(port=port, baudrate=baud_rate, timeout=1)
+        self.arduino = None
         self.reader = SerialReaderThread(arduino=self.arduino)
         self.start_listening()
 
@@ -42,10 +43,11 @@ class MainWindow(QMainWindow):
         # Define an index map for clarity
         self.PAGE_INDEX = {
             'HOME': 0,
-            'CREATE_ORDER': 1,
-            'ORDER_MANAGEMENT': 2,
-            'PRODUCT_LOCATION': 3,
-            'PTL': 4
+            'PRODUCT_MANAGEMENT': 1,
+            'CREATE_ORDER': 2,
+            'ORDER_MANAGEMENT': 3,
+            'PRODUCT_LOCATION': 4,
+            'PTL': 5
         }
         self.current_index = -1  # Track the currently active page index
 
@@ -91,11 +93,14 @@ class MainWindow(QMainWindow):
         new_widget = None
         if target_index == self.PAGE_INDEX['HOME']:
             new_widget = HomePage(
+                self.goto_product_manage_page,
                 self.goto_create_order_page,
                 self.goto_order_manage_page,
                 self.go_to_product_location_page,
                 self.goto_ptl_page
             )
+        elif target_index == self.PAGE_INDEX['PRODUCT_MANAGEMENT']:
+            new_widget = ProductManagementPage(self.goto_home_page)
         elif target_index == self.PAGE_INDEX['CREATE_ORDER']:
             new_widget = CreateOrderPage(self.goto_home_page)
         elif target_index == self.PAGE_INDEX['ORDER_MANAGEMENT']:
@@ -103,7 +108,7 @@ class MainWindow(QMainWindow):
         elif target_index == self.PAGE_INDEX['PRODUCT_LOCATION']:
             new_widget = ProductLocationPage(self.goto_home_page, arduino=self.arduino)
         elif target_index == self.PAGE_INDEX['PTL']:
-            new_widget = PTLPage(self.goto_home_page)
+            new_widget = PTLPage(self.goto_home_page, arduino=self.arduino)
         else:
             return  # Don't proceed if widget is None
 
@@ -120,6 +125,9 @@ class MainWindow(QMainWindow):
 
     def goto_home_page(self):
         self.stack_change(self.PAGE_INDEX['HOME'])
+
+    def goto_product_manage_page(self):
+        self.stack_change(self.PAGE_INDEX['PRODUCT_MANAGEMENT'])
 
     def goto_create_order_page(self):
         self.stack_change(self.PAGE_INDEX['CREATE_ORDER'])

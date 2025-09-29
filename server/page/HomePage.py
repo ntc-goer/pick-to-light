@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import QWidget, QPushButton, QVBoxLayout
 
 class HomePage(QWidget):
     def __init__(self,
+                 gotoProductManagePage,
                  gotoCreateOrderPage,
                  gotoOrderManagePage,
                  goToProductLocationPage,
@@ -19,6 +20,27 @@ class HomePage(QWidget):
         layout.addStretch()
 
         # Two buttons stacked in the center
+
+        button0 = QPushButton("Product Management")
+        button0.setStyleSheet("""
+            QPushButton {
+                background-color: white;
+                color: black;
+                font-size: 14px;
+                padding: 12px 24px;
+                border-radius: 8px;
+            }
+            QPushButton:hover {
+                background-color: #f5f5f5;
+                border: 1px solid #999;
+            }
+            QPushButton:pressed {
+                background-color: #e0e0e0;
+            }
+        """)
+        button0.setCursor(Qt.CursorShape.PointingHandCursor)
+        button0.clicked.connect(gotoProductManagePage)
+
         button1 = QPushButton("Create Order")
         button1.setStyleSheet("""
             QPushButton {
@@ -105,11 +127,13 @@ class HomePage(QWidget):
         button4.setCursor(Qt.CursorShape.PointingHandCursor)
         button4.clicked.connect(gotoPtlPage)
 
+        button0.setFixedWidth(400)
         button1.setFixedWidth(400)
         button2.setFixedWidth(400)
         button3.setFixedWidth(400)
         button4.setFixedWidth(400)
 
+        layout.addWidget(button0, alignment=Qt.AlignmentFlag.AlignHCenter)
         layout.addWidget(button1, alignment=Qt.AlignmentFlag.AlignHCenter)
         layout.addWidget(button2, alignment=Qt.AlignmentFlag.AlignHCenter)
         layout.addWidget(button3, alignment=Qt.AlignmentFlag.AlignHCenter)

@@ -37,17 +37,16 @@ class DatabaseManager:
 
     def drop_all_table(self):
         self.cursor.execute("""
-                    SELECT tablename
-                    FROM pg_tables
-                    WHERE schemaname = 'public';
-                    """)
+                            SELECT tablename
+                            FROM pg_tables
+                            WHERE schemaname = 'public';
+                            """)
 
         tables = self.cursor.fetchall()
         print("tables: ", tables)
         for table in tables:
             self.cursor.execute(f"DROP TABLE IF EXISTS {table[0]} CASCADE;")
             print(f"Dropped table: {table[0]}")
-
 
     def run_script(self, filename):
         try:
@@ -61,9 +60,43 @@ class DatabaseManager:
         except Exception as e:
             print(f"An unexpected error occurred: {e}")
 
-    def insert_product(self, name, price):
-        self.cursor.execute("INSERT INTO products (name, price) VALUES (%s, %s)", (name, price))
+    def insert_product(self, product_name, product_image, price, stock):
+        self.cursor.execute("INSERT INTO products (product_name, product_image, price, stock) VALUES ("
+                            "%s, %s, %s, %s)", (product_name, product_image, price, stock))
         self.conn.commit()
+
+    def get_product_by_id(self, product_id):
+        query = """
+                SELECT id, product_name, product_image, stock, price
+                FROM products
+                WHERE id = %s \
+                """
+        with self.conn.cursor() as cur:
+            cur.execute(query, (product_id,))
+            row = cur.fetchone()
+            if row is None:
+                return None
+            return {
+                "id": row[0],
+                "product_name": row[1],
+                "product_image": row[2],
+                "stock": row[3],
+                "price": row[4],
+            }
+
+    def update_product_by_id(self, product_id, product_name, product_image, stock, price):
+        query = """
+                UPDATE products
+                SET product_name  = %s,
+                    product_image = %s,
+                    stock         = %s,
+                    price         = %s
+                WHERE id = %s
+                """
+        with self.conn.cursor() as cur:
+            cur.execute(query, (product_name, product_image, stock, price, product_id))
+            self.conn.commit()
+            return cur.rowcount > 0  # True if at least one row was updated
 
     def get_product_location(self, shelve, row_location, column_location):
         query = """
@@ -112,7 +145,8 @@ class DatabaseManager:
         query = """
                 INSERT INTO product_locations (product_id, shelve, row_location, column_location, module_id)
                 VALUES (%s, %s, %s, %s, %s) ON CONFLICT (shelve, row_location, column_location)
-               DO UPDATE SET
+               DO
+                UPDATE SET
                     product_id = EXCLUDED.product_id,
                     module_id = EXCLUDED.module_id;
                 """
@@ -131,13 +165,11 @@ class DatabaseManager:
             cur.execute(query, (module_id, location_id))
         self.conn.commit()
 
-
     def get_products(self):
         query = """
                 SELECT id, \
                        product_name, \
                        product_image, \
-                       category_id, \
                        price, \
                        stock
                 FROM products
@@ -153,9 +185,8 @@ class DatabaseManager:
                     "id": r[0],
                     "product_name": r[1],
                     "product_image": r[2],
-                    "category_id": r[3],
-                    "price": r[4],
-                    "stock": r[5],
+                    "price": r[3],
+                    "stock": r[4],
                 }
                 for r in rows
             ]
@@ -245,15 +276,14 @@ class DatabaseManager:
 
     def get_cart_items(self, cart_id):
         query = """
-                SELECT 
-                    ci.id,
-                    ci.product_id,
-                    p.product_name,
-                    p.product_image,
-                    p.price,
-                    ci.quantity
+                SELECT ci.id,
+                       ci.product_id,
+                       p.product_name,
+                       p.product_image,
+                       p.price,
+                       ci.quantity
                 FROM cart_items ci
-                JOIN products p ON ci.product_id = p.id
+                         JOIN products p ON ci.product_id = p.id
                 WHERE ci.cart_id = %s
                 ORDER BY ci.created_at DESC
                 """
@@ -298,19 +328,20 @@ class DatabaseManager:
     def get_cart_item(self, cart_id, product_id):
         query = """SELECT id, cart_id, product_id, quantity
                    FROM cart_items
-                   WHERE cart_id = %s AND product_id = %s"""
+                   WHERE cart_id = %s
+                     AND product_id = %s"""
         with self.conn.cursor() as cur:
-            cur.execute(query, (cart_id,product_id))
+            cur.execute(query, (cart_id, product_id))
             row = cur.fetchone()
             if row is None:
                 return None
             # convert to list of dict
-            result = {"id": row[0], "cart_id": row[1], "product_id": row[2], "quantity": row[3],}
+            result = {"id": row[0], "cart_id": row[1], "product_id": row[2], "quantity": row[3], }
 
             return result
 
     def get_products_by_category(self, category_id):
-        query = """SELECT id, product_name, product_image, price, stock 
+        query = """SELECT id, product_name, product_image, price, stock
                    FROM products
                    WHERE category_id = %s"""
         with self.conn.cursor() as cur:

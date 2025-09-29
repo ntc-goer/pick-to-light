@@ -8,6 +8,7 @@ from page.widget.BackButton import BackButton
 from page.widget.CartItem import CartItem
 from page.widget.ProductCard import ProductCard
 
+
 class CreateOrderPage(QWidget):
     def __init__(self, goto_home_page):
         super().__init__()
@@ -25,8 +26,8 @@ class CreateOrderPage(QWidget):
 
         self.product_container = QWidget()
         self.container_layout = QVBoxLayout(self.product_container)
-        self.load_product("Shirt", os.getenv("SHIRT_CATEGORY_ID"))
-        self.load_product("Jean", os.getenv("PANT_CATEGORY_ID"))
+        self.container_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.load_product("Product")
 
         product_scroll.setWidget(self.product_container)
 
@@ -100,7 +101,7 @@ class CreateOrderPage(QWidget):
                 item["product_name"],
                 item["product_image"],
                 item["price"],
-                item["quantity"],)
+                item["quantity"], )
             )
 
             # Order button
@@ -119,22 +120,25 @@ class CreateOrderPage(QWidget):
         order_button.clicked.connect(self.create_order)
         self.cart_layout.addWidget(order_button)
 
-    def load_product(self, label, category_id):
+    def load_product(self, label):
         title_label = QLabel(label)
         title_label.setStyleSheet("font-size: 18px; font-weight: bold; margin: 10px;")
-        self.container_layout.addWidget(title_label)
+        self.container_layout.addWidget(title_label, alignment=Qt.AlignmentFlag.AlignTop)
 
         product_layout = QGridLayout()
+        product_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.container_layout.addLayout(product_layout)
 
-        data = get_db().get_products_by_category(category_id)
+        data = get_db().get_products()
         item_per_row = 5
         # Example product items
         for i, item in enumerate(data):
             product_layout.addWidget(
-                ProductCard(item["id"], item["product_name"], item["product_image"], add_to_cart= self.add_to_cart),
-                i / item_per_row,
-                i % item_per_row, 1, 1)
+                ProductCard(item["id"], item["product_name"], item["product_image"], add_to_cart=self.add_to_cart),
+                i // item_per_row,
+                i % item_per_row,
+                1, 1
+            )
 
         count = len(data)
         if count < item_per_row:

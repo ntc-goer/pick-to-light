@@ -11,7 +11,7 @@ class SerialReaderThread(QThread):
         self._running = True
 
     def run(self):
-        while self._running:
+        while self.ser and self._running:
             if self.ser.in_waiting > 0:
                 line = self.ser.readline().decode(errors="ignore").strip()
                 if line:

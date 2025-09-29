@@ -1,27 +1,25 @@
 import os
-import time
 
-import cv2
-import imutils
-from PyQt6.QtCore import Qt, QThread, pyqtSignal, pyqtSlot
+from PyQt6.QtCore import Qt, pyqtSlot
 from PyQt6.QtGui import QImage, QPixmap
-from PyQt6.QtWidgets import QWidget, QGridLayout, QVBoxLayout, QLabel, QLineEdit, QPushButton, QHBoxLayout, QMessageBox, \
-    QSizePolicy
-
+from PyQt6.QtWidgets import QWidget, QGridLayout, QVBoxLayout, QLabel, QLineEdit, QPushButton, QMessageBox, \
+    QSizePolicy, QFrame
 from db.db_manager import get_db
 from page.widget.BackButton import BackButton
 from page.widget.CameraThread import CameraThread
-from page.widget.PtlOrderCard import PtlOrderCard
+from page.widget.PtlOrderItem import PtlOrderItem
+
 
 class PTLPage(QWidget):
-    def __init__(self, goto_home_page):
+    def __init__(self, goto_home_page, arduino):
         super().__init__()
         self.scanner_label = None
         self.db = get_db()
+        self.arduino = arduino
 
         # Layout
         layout = QGridLayout(self)
-        self.order_id_input = "06bf7aab-6b0f-47d0-8d13-a8397688f8ad"
+        self.order_id_input = ""
 
         back_button = BackButton(goto_home_page, after_func=self.stop_camera)
 
@@ -120,7 +118,6 @@ class PTLPage(QWidget):
 
         self.open_camera()
 
-
     def show_message(self, message):
         msg = QMessageBox(self)
         msg.setIcon(QMessageBox.Icon.Information)
@@ -143,6 +140,27 @@ class PTLPage(QWidget):
             if reload:
                 self.show_message("Order not found")
             return
+
+        order_title_label = QLabel(f"Order #{order['id']}")
+        order_title_label.setStyleSheet("font-size: 14px; font-weight: bold")
+        self.r_layout.addWidget(order_title_label)
+
+        order_items = self.db.get_order_items_by_order_id(order["id"])
+        for item in order_items:
+            self.r_layout.addWidget(
+                PtlOrderItem(
+                    product_id=item["product_id"],
+                    product_name=item["product_name"],
+                    product_image=item["product_image"],
+                    quantity=item["quantity"],
+                    db=self.db,
+                )
+            )
+
+        line = QFrame()
+        line.setFrameShape(QFrame.Shape.HLine)
+        line.setFrameShadow(QFrame.Shadow.Sunken)
+        self.r_layout.addWidget(line)
 
     def make_spacer(self):
         spacer = QLabel("")
@@ -177,7 +195,8 @@ class PTLPage(QWidget):
     def calculate_map_size(self, shelve_positions, shelve_size, padding_bottom_right_map):
         rows = [p[0] for p in shelve_positions]
         cols = [p[1] for p in shelve_positions]
-        return [max(rows) + shelve_size[0] + padding_bottom_right_map, max(cols) + shelve_size[1] + padding_bottom_right_map]
+        return [max(rows) + shelve_size[0] + padding_bottom_right_map,
+                max(cols) + shelve_size[1] + padding_bottom_right_map]
 
     def load_map(self):
         grid_container = QWidget()

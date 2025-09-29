@@ -21,6 +21,7 @@ class OrderCard(QWidget):
         order_label = QLabel(f"<b>Order</b> #{self.id} - {self.created_at.strftime('%d %b %Y, %I:%M %p')}")
         order_label.setStyleSheet("font-size: 13px;")
         order_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        order_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
         layout.addWidget(order_label, 0, 0, 1, 2)  # span 2 columns
 
         # Row 2, Column 1: Order Items
@@ -42,7 +43,6 @@ class OrderCard(QWidget):
         separator.setFrameShadow(QFrame.Shadow.Sunken)
         layout.addWidget(separator, 2, 0, 1, 2)
 
-
     def load_order_items(self):
         order_items = self.db.get_order_items_by_order_id(self.id)
         order_item_data_layout = QVBoxLayout()
@@ -61,7 +61,7 @@ class OrderCard(QWidget):
             layout.addWidget(image_label)
 
             order_item_label = QLabel(f"{order_item['product_name']} x {order_item['quantity']} ")
-            order_item_label.setStyleSheet("font-size: 12px;")
+            order_item_label.setStyleSheet("font-size: 12px;margin-left: 10px;")
             order_item_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
             layout.addWidget(order_item_label)
             order_item_data_layout.addLayout(layout)

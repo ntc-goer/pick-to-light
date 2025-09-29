@@ -1,18 +1,11 @@
 -- enable extension for UUID
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- Category table
-CREATE TABLE categories (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    category_name VARCHAR(100) NOT NULL UNIQUE
-);
-
 -- Products table
 CREATE TABLE products (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     product_name VARCHAR(255) NOT NULL,
     product_image VARCHAR(255) NOT NULL,
-    category_id UUID NOT NULL REFERENCES categories(id) ON DELETE RESTRICT,
     price DOUBLE PRECISION NOT NULL,
     stock DOUBLE PRECISION NOT NULL
 );
