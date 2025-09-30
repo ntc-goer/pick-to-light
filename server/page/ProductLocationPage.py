@@ -1,6 +1,7 @@
 import os
 
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QIntValidator
 from PyQt6.QtWidgets import QWidget, QGridLayout, QScrollArea, QLabel, QVBoxLayout, QComboBox, QStackedWidget, \
     QPushButton, QListView, QMessageBox, QLineEdit, QRadioButton, QButtonGroup, QFrame
 
@@ -13,6 +14,7 @@ from page.widget.BackButton import BackButton
 class ProductLocationPage(QWidget):
     def __init__(self, goto_home_page, arduino=None):
         super().__init__()
+        self.cell_quantity_text = None
         self.page_stack = None
         self.page_scroll = None
         self.check_all_mode = False
@@ -65,8 +67,14 @@ class ProductLocationPage(QWidget):
 
     def update_cell_location(self):
         product_id = self.product_combo_box.currentData()
-        self.db.upsert_product_location(product_id, self.selected_shelve, self.selected_row, self.selected_column,
-                                        self.cell_module_text)
+        self.db.upsert_product_location(
+            product_id,
+            self.selected_shelve,
+            self.selected_row,
+            self.selected_column,
+            self.cell_module_text,
+            self.cell_quantity_text
+        )
         self.show_message("Update successfully")
 
     def show_message(self, message):
@@ -79,6 +87,9 @@ class ProductLocationPage(QWidget):
 
     def on_module_text_changed(self, text):
         self.cell_module_text = text
+
+    def on_quantity_text_changed(self, text):
+        self.cell_quantity_text = text
 
     def load_cell_map(self):
         while self.v_layout.count():
@@ -151,6 +162,16 @@ class ProductLocationPage(QWidget):
         input_module_edit.textChanged.connect(self.on_module_text_changed)
         self.l_edit_v_layout.addWidget(input_module_edit)
 
+        input_quantity_label = QLabel(f"Quantity:")
+        input_quantity_label.setStyleSheet("font-size: 12px; margin-top: 10px;")
+        self.l_edit_v_layout.addWidget(input_quantity_label)
+
+        input_quantity_edit = QLineEdit()
+        input_quantity_edit.setPlaceholderText("999")
+        input_quantity_edit.setValidator(QIntValidator(1,99999))
+        input_quantity_edit.textChanged.connect(self.on_quantity_text_changed)
+        self.l_edit_v_layout.addWidget(input_quantity_edit)
+
         if location is not None:
             self.cell_module_text = location["module_id"]
             input_module_edit.setText(self.cell_module_text)
@@ -158,6 +179,10 @@ class ProductLocationPage(QWidget):
             index = self.product_combo_box.findData(location["product_id"])
             if index != -1:
                 self.product_combo_box.setCurrentIndex(index)
+
+            self.cell_quantity_text = location["quantity"] or ""
+            input_quantity_edit.setText(str(self.cell_quantity_text))
+
 
         edit_button = QPushButton("Update Cell Location")
         edit_button.setStyleSheet("""
@@ -269,6 +294,7 @@ class ProductLocationPage(QWidget):
         self.selected_shelve = shelve
         self.selected_row = row
         self.selected_column = column
+
         self.load_update_cell()
         self.load_cell_map()
 
@@ -282,15 +308,18 @@ class ProductLocationPage(QWidget):
 
         for ir, r in enumerate(rows):
             for ic, c in enumerate(cols):
-                cell = QPushButton(f"{r}{str(c)}")
-                cell.setFlat(True)
-                cell.setStyleSheet("QPushButton { text-align: center; }")
                 # Check Have Product
                 location = self.db.get_product_location(
                     shelve,
                     r,
                     c
                 )
+                if location is None:
+                    cell = QPushButton(f"{r}{str(c)}")
+                else:
+                    cell = QPushButton(f"{r}{str(c)} \n {location['product_name']} ({location['quantity'] or 0})")
+                cell.setFlat(True)
+                cell.setStyleSheet("QPushButton { text-align: center; }")
                 default_style = """
                     QPushButton {
                         border: 1px solid #555;

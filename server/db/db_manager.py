@@ -100,11 +100,19 @@ class DatabaseManager:
 
     def get_product_location(self, shelve, row_location, column_location):
         query = """
-                SELECT id, product_id, shelve, row_location, column_location, module_id
-                FROM product_locations
-                WHERE shelve = %s \
-                  AND row_location = %s \
-                  AND column_location = %s LIMIT 1; \
+                SELECT pl.id,
+                       pl.product_id,
+                       pl.shelve,
+                       pl.row_location,
+                       pl.column_location,
+                       pl.module_id,
+                       pl.quantity,
+                       p.product_name
+                FROM product_locations pl
+                         JOIN products p ON pl.product_id = p.id
+                WHERE pl.shelve = %s
+                  AND pl.row_location = %s
+                  AND pl.column_location = %s LIMIT 1; \
                 """
         with self.conn.cursor() as cur:
             cur.execute(query, (shelve, row_location, column_location))
@@ -117,12 +125,14 @@ class DatabaseManager:
                 "shelve": row[2],
                 "row_location": row[3],
                 "column_location": row[4],
-                "module_id": row[5]
+                "module_id": row[5],
+                "quantity": row[6],
+                "product_name": row[7],
             }
 
     def get_product_location_by_product_id(self, product_id):
         query = """
-                SELECT id, product_id, shelve, row_location, column_location
+                SELECT id, product_id, shelve, row_location, column_location, module_id
                 FROM product_locations
                 WHERE product_id = %s
                 """
@@ -138,20 +148,22 @@ class DatabaseManager:
                     "shelve": row[2],
                     "row_location": row[3],
                     "column_location": row[4],
+                    "module_id": row[5]
                 })
             return locations
 
-    def upsert_product_location(self, product_id, shelve, row_location, column_location, module_id):
+    def upsert_product_location(self, product_id, shelve, row_location, column_location, module_id, quantity):
         query = """
-                INSERT INTO product_locations (product_id, shelve, row_location, column_location, module_id)
-                VALUES (%s, %s, %s, %s, %s) ON CONFLICT (shelve, row_location, column_location)
+                INSERT INTO product_locations (product_id, shelve, row_location, column_location, module_id, quantity)
+                VALUES (%s, %s, %s, %s, %s, %s) ON CONFLICT (shelve, row_location, column_location)
                DO
                 UPDATE SET
                     product_id = EXCLUDED.product_id,
+                    quantity = EXCLUDED.quantity,
                     module_id = EXCLUDED.module_id;
                 """
         with self.conn.cursor() as cur:
-            cur.execute(query, (product_id, shelve, row_location, column_location, module_id))
+            cur.execute(query, (product_id, shelve, row_location, column_location, module_id, int(quantity)))
         self.conn.commit()
 
     def upsert_shelve_module_mapping(self, location_id, module_id):

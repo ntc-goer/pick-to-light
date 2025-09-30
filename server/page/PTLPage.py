@@ -4,10 +4,14 @@ from PyQt6.QtCore import Qt, pyqtSlot
 from PyQt6.QtGui import QImage, QPixmap
 from PyQt6.QtWidgets import QWidget, QGridLayout, QVBoxLayout, QLabel, QLineEdit, QPushButton, QMessageBox, \
     QSizePolicy, QFrame
+
+from constants import LIGHT_MODE
 from db.db_manager import get_db
+from helper.arduino import send_cell_signal
 from page.widget.BackButton import BackButton
 from page.widget.CameraThread import CameraThread
 from page.widget.PtlOrderItem import PtlOrderItem
+from page.widget.SerialReaderThread import SerialReaderThread
 
 
 class PTLPage(QWidget):
@@ -16,6 +20,8 @@ class PTLPage(QWidget):
         self.scanner_label = None
         self.db = get_db()
         self.arduino = arduino
+        self.reader = SerialReaderThread(arduino=self.arduino)
+        self.arduino_start_listening()
 
         # Layout
         layout = QGridLayout(self)
@@ -54,6 +60,28 @@ class PTLPage(QWidget):
         layout.setColumnStretch(0, 4)  # left column
         layout.setColumnStretch(1, 8)  # right column (wider)
         layout.setRowStretch(1, 1)
+
+    def arduino_start_listening(self):
+        if self.reader is not None:
+            self.reader.data_received.connect(self.arduino_received)
+            self.reader.start()
+
+    def arduino_stop_listening(self):
+        if self.reader:
+            self.reader.stop()
+            self.reader.wait()
+            self.reader = None
+
+    def arduino_received(self, text):
+        data = text.split("|")
+        if len(data) < 2 or data[0] == "" or data[1] != "Done":
+            return
+        module_id = data[0]
+        send_cell_signal(self.arduino, module_id, quantity=0, mode=LIGHT_MODE['OFF'])
+
+    def send_light_signal(self, locations, quantity):
+        send_cell_signal(self.arduino, locations[0]["module_id"], quantity=quantity, mode=LIGHT_MODE['ON'])
+
 
     @pyqtSlot(str)
     def on_qr_detect(self, data):
@@ -167,6 +195,7 @@ class PTLPage(QWidget):
 
         order_items = self.db.get_order_items_by_order_id(order["id"])
         for item in order_items:
+            locations = self.db.get_product_location_by_product_id(item["product_id"])
             self.r_layout.addWidget(
                 PtlOrderItem(
                     product_id=item["product_id"],
@@ -174,7 +203,8 @@ class PTLPage(QWidget):
                     product_image=item["product_image"],
                     quantity=item["quantity"],
                     db=self.db,
-                    arduino=self.arduino
+                    arduino=self.arduino,
+                    locations=locations
                 )
             )
 
