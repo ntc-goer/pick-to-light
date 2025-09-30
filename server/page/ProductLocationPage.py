@@ -6,8 +6,7 @@ from PyQt6.QtWidgets import QWidget, QGridLayout, QScrollArea, QLabel, QVBoxLayo
 
 from constants import LIGHT_MODE
 from db.db_manager import get_db
-from helper.arduino import send_signal, send_checkall_signal, send_offall_signal, send_check_cell_signal, \
-    send_cell_signal
+from helper.arduino import send_checkall_signal, send_offall_signal, send_cell_signal
 from page.widget.BackButton import BackButton
 
 

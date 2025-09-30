@@ -44,7 +44,7 @@ class MainWindow(QMainWindow):
         self.current_index = -1  # Track the currently active page index
 
         # Start on the Home Page
-        self.stack_change(self.PAGE_INDEX['HOME'])
+        self.stack_change(PAGE_INDEX['HOME'])
 
     # ----------------------------------------------------------------------
     ## Core Fix: Managing Page Destruction
@@ -83,7 +83,7 @@ class MainWindow(QMainWindow):
 
         # 2. Initialize and Insert the new widget at index 0
         new_widget = None
-        if target_index == self.PAGE_INDEX['HOME']:
+        if target_index == PAGE_INDEX['HOME']:
             new_widget = HomePage(
                 self.goto_product_manage_page,
                 self.goto_create_order_page,
