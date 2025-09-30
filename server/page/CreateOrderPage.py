@@ -2,7 +2,7 @@ import os
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QWidget, QLabel, QVBoxLayout, QGridLayout, QPushButton, QScrollArea, QToolButton, \
-    QSpacerItem, QSizePolicy
+    QSpacerItem, QSizePolicy, QMessageBox
 from db.db_manager import get_db
 from page.widget.BackButton import BackButton
 from page.widget.CartItem import CartItem
@@ -73,6 +73,15 @@ class CreateOrderPage(QWidget):
         # Remove cart
         db.delete_cart(shop_cart_id)
         self.load_cart()
+        self.show_message("Create order successfully")
+
+    def show_message(self, message):
+        msg = QMessageBox(self)
+        msg.setIcon(QMessageBox.Icon.Information)
+        msg.setWindowTitle("Thông báo")
+        msg.setText(message)
+        msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+        msg.exec()
 
     def add_to_cart(self, product_id):
         shop_cart_id = os.getenv("SHOP_CART_ID")

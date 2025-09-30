@@ -6,11 +6,12 @@ from db.db_manager import get_db
 
 
 class OrderCard(QWidget):
-    def __init__(self, id, created_at):
+    def __init__(self, id, created_at, show_qr):
         super().__init__()
         self.id = id
         self.created_at = created_at
         self.db = get_db()
+        self.show_qr = show_qr
 
         layout = QGridLayout(self)
         layout.setContentsMargins(10, 5, 10, 5)
@@ -33,15 +34,21 @@ class OrderCard(QWidget):
         layout.addLayout(order_item_list_layout, 1, 0, 1, 1)
 
         # Row 2, Column 2: Features
+        show_qr_button = QPushButton("Show QR")
+        show_qr_button.clicked.connect(self.on_show_qr_clicked)
+
         feature_layout = QHBoxLayout()
-        feature_layout.addWidget(QPushButton("Print"))
-        feature_layout.addWidget(QPushButton("Show Map"))
+        feature_layout.addWidget(show_qr_button)
         layout.addLayout(feature_layout, 1, 1, 1, 1)
 
         separator = QFrame()
         separator.setFrameShape(QFrame.Shape.HLine)
         separator.setFrameShadow(QFrame.Shadow.Sunken)
         layout.addWidget(separator, 2, 0, 1, 2)
+
+    def on_show_qr_clicked(self):
+        print("show_qr_clicked", self.id)
+        self.show_qr(self.id)
 
     def load_order_items(self):
         order_items = self.db.get_order_items_by_order_id(self.id)

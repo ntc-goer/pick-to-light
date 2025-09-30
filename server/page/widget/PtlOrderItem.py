@@ -1,6 +1,6 @@
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap, QPainter, QColor
-from PyQt6.QtWidgets import QWidget, QGridLayout, QLabel, QVBoxLayout, QHBoxLayout, QPushButton, QFrame
+from PyQt6.QtWidgets import QWidget, QGridLayout, QLabel, QVBoxLayout, QHBoxLayout, QPushButton, QFrame, QMessageBox
 
 from db.db_manager import get_db
 
@@ -10,6 +10,8 @@ class PtlOrderItem(QWidget):
         super().__init__()
 
         self.db = get_db()
+        self.product_id = product_id
+        self.quantity = quantity
 
         self.layout = QGridLayout(self)
         self.layout.setContentsMargins(10, 5, 10, 5)
@@ -55,13 +57,20 @@ class PtlOrderItem(QWidget):
     def load_light_indicator(self):
         # Load all cell have product id
         row_layout = QHBoxLayout()
-        circle = self.create_circle(Qt.GlobalColor.yellow)  # yellow circle
-        title = QLabel(f"Pick up <b>{2}</b> at <b>{2}</b>")
-        title.setTextFormat(Qt.TextFormat.RichText)
-        title.setStyleSheet("font-size: 14px; margin-right: 5px;")
-        row_layout.addWidget(title)
-        row_layout.addWidget(circle)
-
+        locations = self.db.get_product_location_by_product_id(self.product_id)
+        if len(locations) == 0:
+            title = QLabel(f"No cell location for this product")
+            title.setStyleSheet("color:red;")
+            row_layout.addWidget(title)
+        else:
+            # yellow circle
+            circle = self.create_circle(Qt.GlobalColor.yellow)
+            title = QLabel(
+                f"Pick up <b>{self.quantity}</b> items at <b>{locations[0]['shelve']}-{locations[0]['row_location']}{locations[0]['column_location']}</b>")
+            title.setTextFormat(Qt.TextFormat.RichText)
+            title.setStyleSheet("font-size: 14px; margin-right: 5px;")
+            row_layout.addWidget(title)
+            row_layout.addWidget(circle)
         self.layout.addLayout(row_layout, 0, 2, 1, 1)
 
     def create_circle(self, color):

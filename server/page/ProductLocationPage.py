@@ -283,7 +283,7 @@ class ProductLocationPage(QWidget):
 
         for ir, r in enumerate(rows):
             for ic, c in enumerate(cols):
-                cell = QPushButton(f"{shelve}-{r}{str(c)}")
+                cell = QPushButton(f"{r}{str(c)}")
                 cell.setFlat(True)
                 cell.setStyleSheet("QPushButton { text-align: center; }")
                 # Check Have Product

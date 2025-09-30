@@ -1,8 +1,9 @@
-import threading
+from pyzbar import pyzbar
 import time
 
 import cv2
 import imutils
+import winsound
 from PyQt6.QtCore import QThread, pyqtSignal
 from PyQt6.QtGui import QImage
 
@@ -11,11 +12,15 @@ class CameraThread(QThread):
     frame_signal = pyqtSignal(QImage)
 
 
-    def __init__(self):
+    def __init__(self, on_qr_detect):
         super().__init__()
         self._running = False
-
+        self.detector = cv2.QRCodeDetector()
         self.cap = None
+        self.on_qr_detect = on_qr_detect
+        self.last_data = None
+        self.last_time = 0
+        self.cooldown = 2
 
     def run(self):
         # Set running flag
@@ -31,6 +36,20 @@ class CameraThread(QThread):
 
         while self._running:
             ret, frame = self.cap.read()
+
+            barcodes = pyzbar.decode(frame)
+            print(barcodes, len(barcodes))
+            for barcode in barcodes:
+                data = barcode.data.decode("utf-8")
+
+                now = time.time()
+                if data != self.last_data or (now - self.last_time) > self.cooldown:
+                    self.last_data = data
+                    self.last_time = now
+
+                    self.on_qr_detect(data)
+
+                    winsound.Beep(1000, 1000)
 
             # Check the running flag again right after read() returns
             if not self._running or not ret:

@@ -12,7 +12,6 @@ class HomePage(QWidget):
 
                  ):
         super().__init__()
-
         # Main vertical layout
         layout = QVBoxLayout(self)
 
