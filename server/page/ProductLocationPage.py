@@ -4,7 +4,10 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QWidget, QGridLayout, QScrollArea, QLabel, QVBoxLayout, QComboBox, QStackedWidget, \
     QPushButton, QListView, QMessageBox, QLineEdit, QRadioButton, QButtonGroup, QFrame
 
+from constants import LIGHT_MODE
 from db.db_manager import get_db
+from helper.arduino import send_signal, send_checkall_signal, send_offall_signal, send_check_cell_signal, \
+    send_cell_signal
 from page.widget.BackButton import BackButton
 
 
@@ -243,25 +246,22 @@ class ProductLocationPage(QWidget):
     def test_check_all(self):
         self.check_all_mode = not self.check_all_mode
         if self.check_all_mode:
-            text = "CheckAll"
+            send_checkall_signal(self.arduino)
         else:
-            text = "OffAll"
-        self.arduino.write((text + "\n").encode())
+            send_offall_signal(self.arduino)
 
     def test_light(self):
-        text = f"{self.cell_module_text}|{self.test_quantity_text}|{self.get_test_mode()}"
-        print(text)
-        self.arduino.write((text + "\n").encode())
+        send_cell_signal(self.arduino, self.cell_module_text, self.test_quantity_text, self.get_test_mode())
 
     def get_test_mode(self):
         if self.test_radio_1.isChecked():
-            return 0
+            return LIGHT_MODE['OFF']
         elif self.test_radio_2.isChecked():
-            return 1
+            return LIGHT_MODE['ON']
         elif self.test_radio_3.isChecked():
-            return 2
+            return LIGHT_MODE['BLINK']
         else:
-            return -1
+            return LIGHT_MODE['OTHER']
 
     def change_shelve_index(self, index):
         self.page_stack.setCurrentIndex(index)

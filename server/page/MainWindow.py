@@ -4,6 +4,7 @@ import serial
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QMainWindow, QPushButton, QLabel, QVBoxLayout, QWidget, QStackedWidget
 
+from constants import PAGE_INDEX
 # Import your page classes
 from page.CreateOrderPage import CreateOrderPage
 from page.HomePage import HomePage
@@ -40,15 +41,6 @@ class MainWindow(QMainWindow):
         self.stacked_widget = QStackedWidget()
         self.setCentralWidget(self.stacked_widget)
 
-        # Define an index map for clarity
-        self.PAGE_INDEX = {
-            'HOME': 0,
-            'PRODUCT_MANAGEMENT': 1,
-            'CREATE_ORDER': 2,
-            'ORDER_MANAGEMENT': 3,
-            'PRODUCT_LOCATION': 4,
-            'PTL': 5
-        }
         self.current_index = -1  # Track the currently active page index
 
         # Start on the Home Page
@@ -99,15 +91,15 @@ class MainWindow(QMainWindow):
                 self.go_to_product_location_page,
                 self.goto_ptl_page
             )
-        elif target_index == self.PAGE_INDEX['PRODUCT_MANAGEMENT']:
+        elif target_index == PAGE_INDEX['PRODUCT_MANAGEMENT']:
             new_widget = ProductManagementPage(self.goto_home_page)
-        elif target_index == self.PAGE_INDEX['CREATE_ORDER']:
+        elif target_index == PAGE_INDEX['CREATE_ORDER']:
             new_widget = CreateOrderPage(self.goto_home_page)
-        elif target_index == self.PAGE_INDEX['ORDER_MANAGEMENT']:
+        elif target_index == PAGE_INDEX['ORDER_MANAGEMENT']:
             new_widget = OrderManagementPage(self.goto_home_page)
-        elif target_index == self.PAGE_INDEX['PRODUCT_LOCATION']:
+        elif target_index == PAGE_INDEX['PRODUCT_LOCATION']:
             new_widget = ProductLocationPage(self.goto_home_page, arduino=self.arduino)
-        elif target_index == self.PAGE_INDEX['PTL']:
+        elif target_index == PAGE_INDEX['PTL']:
             new_widget = PTLPage(self.goto_home_page, arduino=self.arduino)
         else:
             return  # Don't proceed if widget is None
@@ -124,19 +116,19 @@ class MainWindow(QMainWindow):
     # ----------------------------------------------------------------------
 
     def goto_home_page(self):
-        self.stack_change(self.PAGE_INDEX['HOME'])
+        self.stack_change(PAGE_INDEX['HOME'])
 
     def goto_product_manage_page(self):
-        self.stack_change(self.PAGE_INDEX['PRODUCT_MANAGEMENT'])
+        self.stack_change(PAGE_INDEX['PRODUCT_MANAGEMENT'])
 
     def goto_create_order_page(self):
-        self.stack_change(self.PAGE_INDEX['CREATE_ORDER'])
+        self.stack_change(PAGE_INDEX['CREATE_ORDER'])
 
     def goto_order_manage_page(self):
-        self.stack_change(self.PAGE_INDEX['ORDER_MANAGEMENT'])
+        self.stack_change(PAGE_INDEX['ORDER_MANAGEMENT'])
 
     def go_to_product_location_page(self):
-        self.stack_change(self.PAGE_INDEX['PRODUCT_LOCATION'])
+        self.stack_change(PAGE_INDEX['PRODUCT_LOCATION'])
 
     def goto_ptl_page(self):
-        self.stack_change(self.PAGE_INDEX['PTL'])
+        self.stack_change(PAGE_INDEX['PTL'])

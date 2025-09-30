@@ -2,14 +2,17 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap, QPainter, QColor
 from PyQt6.QtWidgets import QWidget, QGridLayout, QLabel, QVBoxLayout, QHBoxLayout, QPushButton, QFrame, QMessageBox
 
+from constants import LIGHT_MODE
 from db.db_manager import get_db
+from helper.arduino import send_cell_signal
 
 
 class PtlOrderItem(QWidget):
-    def __init__(self, product_id, product_name, product_image, quantity, db):
+    def __init__(self, product_id, product_name, product_image, quantity, db, arduino):
         super().__init__()
 
-        self.db = get_db()
+        self.db = db
+        self.arduino = arduino
         self.product_id = product_id
         self.quantity = quantity
 
@@ -47,17 +50,22 @@ class PtlOrderItem(QWidget):
         self.layout.addLayout(product_data_layout, 0, 1, 1, 1)
 
         # --- Column 3: Light feature
-        self.load_light_indicator()
+        locations = self.db.get_product_location_by_product_id(self.product_id)
+        self.load_light_indicator(locations)
+        self.send_light_signal(locations, self.quantity)
 
         # Stretch ratios
         self.layout.setColumnStretch(0, 2)
         self.layout.setColumnStretch(1, 6)
         self.layout.setColumnStretch(2, 2)
 
-    def load_light_indicator(self):
+    def send_light_signal(self, locations, quantity):
+        send_cell_signal(self.arduino, locations[0]["module_id"], quantity=quantity, mode=LIGHT_MODE['ON'])
+
+    def load_light_indicator(self, locations):
         # Load all cell have product id
         row_layout = QHBoxLayout()
-        locations = self.db.get_product_location_by_product_id(self.product_id)
+
         if len(locations) == 0:
             title = QLabel(f"No cell location for this product")
             title.setStyleSheet("color:red;")

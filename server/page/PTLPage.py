@@ -42,7 +42,8 @@ class PTLPage(QWidget):
             }
         """)
         self.load_right_layout()
-        self.camera_thread = CameraThread(on_qr_detect=self.on_qr_detect)
+        self.camera_thread = CameraThread()
+        self.camera_thread.qr_signal.connect(self.on_qr_detect)
         self.camera_thread.frame_signal.connect(self.set_image)
 
         layout.addWidget(back_button, 0, 0, 1, 2)  # row=0, col=0, span=1x1
@@ -54,13 +55,20 @@ class PTLPage(QWidget):
         layout.setColumnStretch(1, 8)  # right column (wider)
         layout.setRowStretch(1, 1)
 
+    @pyqtSlot(str)
     def on_qr_detect(self, data):
-        print("qr_detect", data)
+        self.order_id_input = data
+        print("data", data)
+        if self.order_id_input is None or self.order_id_input == "":
+            return None
+        self.order_id_input = self.order_id_input.strip()
+        self.load_right_layout(reload=True)
+        return None
+
     def on_text_changed(self, text):
         self.order_id_input = text
 
     def submit_order_id(self):
-        print("find", self.order_id_input)
         if self.order_id_input is None or self.order_id_input == "":
             return self.show_message("Please enter order id")
         self.order_id_input = self.order_id_input.strip()
@@ -69,12 +77,12 @@ class PTLPage(QWidget):
 
     def open_camera(self):
         if not hasattr(self, "camera_thread") or not self.camera_thread.isRunning():
-            self.camera_thread = CameraThread(on_qr_detect=self.on_qr_detect)
+            self.camera_thread = CameraThread()
+            self.camera_thread.qr_signal.connect(self.on_qr_detect)
             self.camera_thread.frame_signal.connect(self.set_image)
             self.camera_thread.start()
 
     def stop_camera(self):
-        print("stop camera thread", self.camera_thread)
         if self.camera_thread:
             self.camera_thread.stop()
             self.camera_thread.wait()
@@ -139,7 +147,6 @@ class PTLPage(QWidget):
         self.load_map()
 
     def load_right_layout(self, reload=False):
-        print("here")
         if self.order_id_input == "":
             return
         order = self.db.get_order_by_id(self.order_id_input)
@@ -147,7 +154,13 @@ class PTLPage(QWidget):
             if reload:
                 self.show_message("Order not found")
             return
-        print("here 2")
+
+        while self.r_layout.count():
+            item = self.r_layout.takeAt(0)
+            widget = item.widget()
+            if widget:
+                widget.deleteLater()
+
         order_title_label = QLabel(f"Order #{order['id']}")
         order_title_label.setStyleSheet("font-size: 14px; font-weight: bold")
         self.r_layout.addWidget(order_title_label)
@@ -161,6 +174,7 @@ class PTLPage(QWidget):
                     product_image=item["product_image"],
                     quantity=item["quantity"],
                     db=self.db,
+                    arduino=self.arduino
                 )
             )
 

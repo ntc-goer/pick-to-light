@@ -10,14 +10,13 @@ from PyQt6.QtGui import QImage
 
 class CameraThread(QThread):
     frame_signal = pyqtSignal(QImage)
+    qr_signal = pyqtSignal(str)
 
-
-    def __init__(self, on_qr_detect):
+    def __init__(self):
         super().__init__()
         self._running = False
         self.detector = cv2.QRCodeDetector()
         self.cap = None
-        self.on_qr_detect = on_qr_detect
         self.last_data = None
         self.last_time = 0
         self.cooldown = 2
@@ -38,7 +37,6 @@ class CameraThread(QThread):
             ret, frame = self.cap.read()
 
             barcodes = pyzbar.decode(frame)
-            print(barcodes, len(barcodes))
             for barcode in barcodes:
                 data = barcode.data.decode("utf-8")
 
@@ -46,8 +44,8 @@ class CameraThread(QThread):
                 if data != self.last_data or (now - self.last_time) > self.cooldown:
                     self.last_data = data
                     self.last_time = now
-
-                    self.on_qr_detect(data)
+                    print("data", data)
+                    self.qr_signal.emit(data)
 
                     winsound.Beep(1000, 1000)
 
