@@ -21,7 +21,6 @@ class ProductManagementPage(QWidget):
         self.edit_product_id = None
         self.edit_product_name = ""
         self.edit_product_image = None
-        self.edit_product_stock = None
         self.edit_product_price = None
 
         self.db = get_db()
@@ -157,16 +156,6 @@ class ProductManagementPage(QWidget):
         upload_product_name.textChanged.connect(self.on_upload_product_name_changed)
         self.edit_layout.addWidget(upload_product_name)
 
-        upload_product_stock_label = QLabel(f"Product Stock:")
-        upload_product_stock_label.setStyleSheet("font-size: 12px; margin-top: 10px;")
-        self.edit_layout.addWidget(upload_product_stock_label)
-
-        upload_product_stock = QLineEdit()
-        upload_product_stock.setPlaceholderText("10")
-        upload_product_stock.textChanged.connect(self.on_upload_product_stock_changed)
-        upload_product_stock.setValidator(QIntValidator(1,99999))
-        self.edit_layout.addWidget(upload_product_stock)
-
         add_product_button = QPushButton("Add Product")
         add_product_button.clicked.connect(self.submit_add_product)
         add_product_button.setStyleSheet("""
@@ -195,7 +184,6 @@ class ProductManagementPage(QWidget):
 
         self.edit_product_name = product["product_name"]
         self.edit_product_image = product["product_image"]
-        self.edit_product_stock = int(product["stock"])
         self.edit_product_price = product["price"]
 
         self.image_label = QLabel()
@@ -239,18 +227,6 @@ class ProductManagementPage(QWidget):
         edit_product_name.textChanged.connect(self.on_edit_product_name_changed)
         self.edit_layout.addWidget(edit_product_name)
 
-        edit_product_stock_label = QLabel(f"Product Stock:")
-        edit_product_stock_label.setStyleSheet("font-size: 12px; margin-top: 10px;")
-        self.edit_layout.addWidget(edit_product_stock_label)
-
-        print(self.edit_product_stock)
-        edit_product_stock = QLineEdit()
-        edit_product_stock.setPlaceholderText("10")
-        edit_product_stock.setText(str(int(self.edit_product_stock)))
-        edit_product_stock.textChanged.connect(self.on_edit_product_stock_changed)
-        edit_product_stock.setValidator(QIntValidator(1, 99999))
-        self.edit_layout.addWidget(edit_product_stock)
-
         edit_product_button = QPushButton("Edit Product")
         edit_product_button.clicked.connect(self.submit_edit_product)
         edit_product_button.setStyleSheet("""
@@ -293,7 +269,7 @@ class ProductManagementPage(QWidget):
             product_name=self.edit_product_name,
             product_image=self.edit_product_image,
             price=1000,
-            stock=self.edit_product_stock,
+            stock=0,
         )
         self.load_products()
         self.show_message("Update Product Successful")
@@ -304,12 +280,6 @@ class ProductManagementPage(QWidget):
 
     def on_edit_product_name_changed(self, text):
         self.edit_product_name = text
-
-    def on_upload_product_stock_changed(self, text):
-        self.upload_product_stock = text
-
-    def on_edit_product_stock_changed(self, text):
-        self.edit_product_stock = text
 
     def upload_image(self):
         self.upload_file_name, _ = QFileDialog.getOpenFileName(

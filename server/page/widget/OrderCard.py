@@ -47,7 +47,6 @@ class OrderCard(QWidget):
         layout.addWidget(separator, 2, 0, 1, 2)
 
     def on_show_qr_clicked(self):
-        print("show_qr_clicked", self.id)
         self.show_qr(self.id)
 
     def load_order_items(self):

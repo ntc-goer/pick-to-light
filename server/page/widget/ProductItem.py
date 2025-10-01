@@ -47,10 +47,10 @@ class ProductItem(QWidget):
         title_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         product_data_layout.addWidget(title_label)
 
-        stock_label = QLabel(f"Stock:  {self.stock}")
-        stock_label.setStyleSheet("font-size: 12px; color: #333;")
-        stock_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
-        product_data_layout.addWidget(stock_label)
+        # stock_label = QLabel(f"Stock:  {self.stock}")
+        # stock_label.setStyleSheet("font-size: 12px; color: #333;")
+        # stock_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        # product_data_layout.addWidget(stock_label)
 
         content_layout.addLayout(product_data_layout, 0, 1, 1, 1)
         # --- Column 3: Edit
