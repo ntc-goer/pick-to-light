@@ -3,7 +3,7 @@ import os
 from PyQt6.QtCore import Qt, pyqtSlot
 from PyQt6.QtGui import QImage, QPixmap
 from PyQt6.QtWidgets import QWidget, QGridLayout, QVBoxLayout, QLabel, QLineEdit, QPushButton, QMessageBox, \
-    QSizePolicy, QFrame
+    QSizePolicy, QFrame, QLayout, QHBoxLayout, QScrollArea
 
 from constants import LIGHT_MODE
 from db.db_manager import get_db
@@ -25,7 +25,7 @@ class PTLPage(QWidget):
 
         # Layout
         layout = QGridLayout(self)
-        self.order_id_input = ""
+        self.order_id_input = "7a697555-e11e-4b26-b355-6672f0f843e2"
 
         back_button = BackButton(goto_home_page, after_func=self.stop_camera)
 
@@ -47,6 +47,10 @@ class PTLPage(QWidget):
                 background-color: #ffffff;
             }
         """)
+        self.r_scroll = QScrollArea()
+        self.r_scroll.setWidgetResizable(True)
+        self.r_scroll.setWidget(self.r_container)
+
         self.load_right_layout()
         self.camera_thread = CameraThread()
         self.camera_thread.qr_signal.connect(self.on_qr_detect)
@@ -54,7 +58,7 @@ class PTLPage(QWidget):
 
         layout.addWidget(back_button, 0, 0, 1, 2)  # row=0, col=0, span=1x1
         layout.addWidget(self.l_container, 1, 0, 1, 1)
-        layout.addWidget(self.r_container, 1, 1, 1, 1)
+        layout.addWidget(self.r_scroll, 1, 1, 1, 1)
 
         # Stretching: make both columns expand properly
         layout.setColumnStretch(0, 4)  # left column
@@ -81,7 +85,6 @@ class PTLPage(QWidget):
 
     def send_light_signal(self, locations, quantity):
         send_cell_signal(self.arduino, locations[0]["module_id"], quantity=quantity, mode=LIGHT_MODE['ON'])
-
 
     @pyqtSlot(str)
     def on_qr_detect(self, data):
@@ -194,8 +197,12 @@ class PTLPage(QWidget):
         self.r_layout.addWidget(order_title_label)
 
         order_items = self.db.get_order_items_by_order_id(order["id"])
+        locations_arr = []
         for item in order_items:
             locations = self.db.get_product_location_by_product_id(item["product_id"])
+            # Fix me
+            location = locations[0] if locations else None
+            locations_arr.append(f"{location['shelve']}-{location['row_location']}:{location['column_location']}")
             self.r_layout.addWidget(
                 PtlOrderItem(
                     product_id=item["product_id"],
@@ -212,6 +219,106 @@ class PTLPage(QWidget):
         line.setFrameShape(QFrame.Shape.HLine)
         line.setFrameShadow(QFrame.Shadow.Sunken)
         self.r_layout.addWidget(line)
+
+        # Draw map start
+        warehouse_grid = os.getenv("WAREHOUSE_GRID").split(":")
+        shelve_cols = os.getenv("SHELVE_COLS").split(",")
+        shelve_rows = os.getenv("SHELVE_ROWS").split(",")
+
+        map_container = QWidget()
+        map_layout = QGridLayout(map_container)
+        map_container.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+
+        map_layout.setSpacing(0)
+        map_layout.setContentsMargins(0, 0, 0, 0)
+        map_layout.setHorizontalSpacing(0)
+        map_layout.setVerticalSpacing(0)
+
+        shelve_pos = os.getenv("SHELVE_POSITIONS").split("|")
+        shelve_places = []
+        for pos_i, pos in enumerate(shelve_pos):
+            pos_arr = pos.split("-")
+            start_post = pos_arr[0].split(":")
+            shelve_dir = pos_arr[1]
+            if shelve_dir == "Horizontal":
+                # Horizontal 0:0 -> 0:3
+                shelve_place = [f"Shelve {pos_i + 1}-{start_post[0]}:{int(start_post[1]) + i}-Horizontal" for i in
+                                range(len(shelve_cols))]
+                shelve_places.extend(shelve_place)
+            elif shelve_dir == "Vertical":
+                # Vertical 5:0 -> 2:0
+                shelve_place = [f"Shelve {pos_i + 1}-{int(start_post[0]) - i}:{start_post[1]}-Vertical" for i in
+                                range(len(shelve_cols))]
+                shelve_places.extend(shelve_place)
+
+        graph_map = {}
+
+        gate_pos = os.getenv("GATE_POSITION")
+        shelves = os.getenv("SHELVES").split(",")
+        h_col_tmp = 1
+        v_col_tmp = len(shelve_cols)
+        for ri in range(int(warehouse_grid[0])):
+            for ci in range(int(warehouse_grid[1])):
+                is_in_shelve = False
+                for shelve in shelves:
+                    shelve_hor = f"{shelve}-{ri}:{ci}-Horizontal"
+                    shelve_ver = f"{shelve}-{ri}:{ci}-Vertical"
+                    if shelve_hor in shelve_places:
+                        is_in_shelve = True
+                        cell = QWidget()
+                        cell_layout = QVBoxLayout(cell)
+                        cell_layout.setContentsMargins(0, 0, 0, 0)
+                        cell_layout.setSpacing(0)
+
+                        for i, shelve_row in enumerate(shelve_rows):
+                            lb = QLabel(f"{shelve_row}{h_col_tmp}")
+                            lb.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                            cell_label = f"{shelve}-{shelve_row}:{h_col_tmp}"
+                            if cell_label in locations_arr:
+                                lb.setStyleSheet("background-color: yellow; border: 1px solid black;")
+                            else:
+                                lb.setStyleSheet("background-color: white; border: 1px solid black;")
+                            cell_layout.setStretch(i, 1)
+                            cell_layout.addWidget(lb)
+                        h_col_tmp += 1
+                        cell.setFixedSize(50, 50)
+                        map_layout.addWidget(cell, ri, ci)
+                    elif shelve_ver in shelve_places:
+                        is_in_shelve = True
+                        cell = QWidget()
+                        cell_layout = QHBoxLayout(cell)
+                        cell_layout.setContentsMargins(0, 0, 0, 0)
+                        cell_layout.setSpacing(0)
+
+                        for i, shelve_row in enumerate(shelve_rows):
+                            lb = QLabel(f"{shelve_row}{v_col_tmp}")
+                            lb.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                            cell_label = f"{shelve}-{shelve_row}:{v_col_tmp}"
+                            if cell_label in locations_arr:
+                                lb.setStyleSheet("background-color: yellow; border: 1px solid black;")
+                            else:
+                                lb.setStyleSheet("background-color: white; border: 1px solid black;")
+                            cell_layout.setStretch(i, 1)
+                            cell_layout.addWidget(lb)
+                        v_col_tmp -= 1
+
+                        cell.setFixedSize(50, 50)
+                        map_layout.addWidget(cell, ri, ci)
+                if is_in_shelve:
+                    continue
+                if f"{ri}:{ci}" == gate_pos:
+                    cell = QWidget()
+                    cell.setStyleSheet("background-color: #89CFF0;")
+                    cell.setFixedSize(50, 50)
+                    map_layout.addWidget(cell, ri, ci)
+                else:
+                    cell = QWidget()
+                    cell.setStyleSheet("background-color: #D3D3D3;")
+                    cell.setFixedSize(50, 50)
+                    map_layout.addWidget(cell, ri, ci)
+
+        self.r_layout.addWidget(map_container)
+        # Draw map end
 
     def make_spacer(self):
         spacer = QLabel("")

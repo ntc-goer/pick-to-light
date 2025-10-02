@@ -1,5 +1,6 @@
 import os
 
+import serial
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QMainWindow, QStackedWidget
 
@@ -11,7 +12,6 @@ from page.OrderManagementPage import OrderManagementPage
 from page.PTLPage import PTLPage
 from page.ProductLocationPage import ProductLocationPage
 from page.ProductManagementPage import ProductManagementPage
-from page.widget.SerialReaderThread import SerialReaderThread
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -19,8 +19,8 @@ class MainWindow(QMainWindow):
 
         port = os.getenv("SERIAL_PORT", "COM3")
         baud_rate = os.getenv("SERIAL_BAUD_RATE", 9600)
-        # self.arduino = serial.Serial(port=port, baudrate=baud_rate, timeout=1)
-        self.arduino = None
+        self.arduino = serial.Serial(port=port, baudrate=baud_rate, timeout=1)
+        # self.arduino = None
 
         # Config Main Window
         self.setWindowTitle("Warehouse Management")
