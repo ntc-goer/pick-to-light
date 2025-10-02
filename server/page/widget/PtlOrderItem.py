@@ -4,14 +4,25 @@ from PyQt6.QtWidgets import QWidget, QGridLayout, QLabel, QVBoxLayout, QHBoxLayo
 
 
 class PtlOrderItem(QWidget):
-    def __init__(self, product_id, product_name, product_image, quantity, db, arduino, locations):
+    def __init__(
+            self,
+            product_id,
+            product_name,
+            product_image,
+            quantity,
+            db,
+            locations,
+            off_light_manual,
+            is_lighting=False
+    ):
         super().__init__()
 
         self.db = db
-        self.arduino = arduino
         self.product_id = product_id
         self.quantity = quantity
         self.locations = locations
+        self.is_lighting = is_lighting
+        self.off_light_manual = off_light_manual
 
         self.layout = QGridLayout(self)
         self.layout.setContentsMargins(10, 5, 10, 5)
@@ -65,14 +76,38 @@ class PtlOrderItem(QWidget):
             row_layout.addWidget(title)
         else:
             # yellow circle
-            circle = self.create_circle(Qt.GlobalColor.yellow)
+            circle = self.create_circle(Qt.GlobalColor.gray)
+            if self.is_lighting:
+                circle = self.create_circle(Qt.GlobalColor.yellow)
             title = QLabel(
                 f"Pick up <b>{self.quantity}</b> items at <b>{locations[0]['shelve']}-{locations[0]['row_location']}{locations[0]['column_location']}</b>")
             title.setTextFormat(Qt.TextFormat.RichText)
             title.setStyleSheet("font-size: 14px; margin-right: 5px;")
             row_layout.addWidget(title)
             row_layout.addWidget(circle)
+
+            if self.is_lighting:
+                off_ptl_btn = QPushButton("Off")
+                off_ptl_btn.setStyleSheet("""
+                   QPushButton {
+                       background-color: #4CAF50;
+                       color: white;
+                       padding: 5px;
+                       border-radius: 5px;
+                       width: 20px;
+                       margin-left: 5px;
+                   }
+                   QPushButton:hover {
+                       background-color: #45a049;
+                   }
+               """)
+                off_ptl_btn.clicked.connect(self.off_ptl_f)
+                row_layout.addWidget(off_ptl_btn)
         self.layout.addLayout(row_layout, 0, 2, 1, 1)
+
+    def off_ptl_f(self):
+        location = self.locations[0] if self.locations else None
+        self.off_light_manual(location)
 
     def create_circle(self, color):
         pixmap = QPixmap(14, 14)

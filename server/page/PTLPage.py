@@ -3,7 +3,7 @@ import os
 from PyQt6.QtCore import Qt, pyqtSlot
 from PyQt6.QtGui import QImage, QPixmap
 from PyQt6.QtWidgets import QWidget, QGridLayout, QVBoxLayout, QLabel, QLineEdit, QPushButton, QMessageBox, \
-    QSizePolicy, QFrame, QLayout, QHBoxLayout, QScrollArea
+    QSizePolicy, QFrame, QHBoxLayout, QScrollArea
 
 from constants import LIGHT_MODE
 from db.db_manager import get_db
@@ -22,6 +22,8 @@ class PTLPage(QWidget):
         self.arduino = arduino
         self.reader = SerialReaderThread(arduino=self.arduino)
         self.arduino_start_listening()
+        self.order_item_light_state = {}
+        self.order_item_cell_state = {}
 
         # Layout
         layout = QGridLayout(self)
@@ -171,9 +173,6 @@ class PTLPage(QWidget):
         msg.setStandardButtons(QMessageBox.StandardButton.Ok)
         msg.exec()
 
-    def on_ptl(self, order_id):
-        print("order_id", order_id)
-
     def on_show_direction(self):
         self.load_map()
 
@@ -192,9 +191,31 @@ class PTLPage(QWidget):
             if widget:
                 widget.deleteLater()
 
+        order_title_container = QWidget()
+        order_title_layout = QHBoxLayout(order_title_container)
+
         order_title_label = QLabel(f"Order #{order['id']}")
         order_title_label.setStyleSheet("font-size: 14px; font-weight: bold")
-        self.r_layout.addWidget(order_title_label)
+
+        ptl_btn = QPushButton("PTL")
+        ptl_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #4CAF50;
+                color: white;
+                padding: 5px;
+                border-radius: 5px;
+                width: 20px;
+            }
+            QPushButton:hover {
+                background-color: #45a049;
+            }
+        """)
+        ptl_btn.clicked.connect(self.ptl_function)
+
+        order_title_layout.addWidget(order_title_label)
+        order_title_layout.addWidget(ptl_btn)
+
+        self.r_layout.addWidget(order_title_container)
 
         order_items = self.db.get_order_items_by_order_id(order["id"])
         locations_arr = []
@@ -202,6 +223,18 @@ class PTLPage(QWidget):
             locations = self.db.get_product_location_by_product_id(item["product_id"])
             # Fix me
             location = locations[0] if locations else None
+            if item["id"] not in self.order_item_light_state:
+                self.order_item_light_state[item["id"]] = False
+            if item["id"] not in self.order_item_cell_state:
+                self.order_item_cell_state[item["id"]] = [
+                    {
+                        "module_id": location["module_id"],
+                        "shelve": location["shelve"],
+                        "row_location": location["row_location"],
+                        "column_location": location["column_location"],
+                        "quantity": item["quantity"],
+                    }
+                ]
             locations_arr.append(f"{location['shelve']}-{location['row_location']}:{location['column_location']}")
             self.r_layout.addWidget(
                 PtlOrderItem(
@@ -210,8 +243,9 @@ class PTLPage(QWidget):
                     product_image=item["product_image"],
                     quantity=item["quantity"],
                     db=self.db,
-                    arduino=self.arduino,
-                    locations=locations
+                    locations=locations,
+                    off_light_manual=self.off_light_manual,
+                    is_lighting=self.order_item_light_state[item["id"]]
                 )
             )
 
@@ -251,8 +285,6 @@ class PTLPage(QWidget):
                                 range(len(shelve_cols))]
                 shelve_places.extend(shelve_place)
 
-        graph_map = {}
-
         gate_pos = os.getenv("GATE_POSITION")
         shelves = os.getenv("SHELVES").split(",")
         h_col_tmp = 1
@@ -274,7 +306,7 @@ class PTLPage(QWidget):
                             lb = QLabel(f"{shelve_row}{h_col_tmp}")
                             lb.setAlignment(Qt.AlignmentFlag.AlignCenter)
                             cell_label = f"{shelve}-{shelve_row}:{h_col_tmp}"
-                            if cell_label in locations_arr:
+                            if cell_label in locations_arr and self.is_lighting_cell(shelve, shelve_row, h_col_tmp):
                                 lb.setStyleSheet("background-color: yellow; border: 1px solid black;")
                             else:
                                 lb.setStyleSheet("background-color: white; border: 1px solid black;")
@@ -294,7 +326,7 @@ class PTLPage(QWidget):
                             lb = QLabel(f"{shelve_row}{v_col_tmp}")
                             lb.setAlignment(Qt.AlignmentFlag.AlignCenter)
                             cell_label = f"{shelve}-{shelve_row}:{v_col_tmp}"
-                            if cell_label in locations_arr:
+                            if cell_label in locations_arr and self.is_lighting_cell(shelve, shelve_row, v_col_tmp):
                                 lb.setStyleSheet("background-color: yellow; border: 1px solid black;")
                             else:
                                 lb.setStyleSheet("background-color: white; border: 1px solid black;")
@@ -319,6 +351,37 @@ class PTLPage(QWidget):
 
         self.r_layout.addWidget(map_container)
         # Draw map end
+
+    def is_lighting_cell(self, shelve, row , col):
+        keys = self.order_item_light_state.keys()
+        is_light = False
+        for key in keys:
+            if self.order_item_cell_state[key][0]["shelve"] == shelve and self.order_item_cell_state[key][0]["row_location"] == row and self.order_item_cell_state[key][0]["column_location"] == col:
+                is_light = self.order_item_light_state[key]
+        return is_light
+
+
+    def off_light_manual(self, location):
+        keys = self.order_item_light_state.keys()
+        for key in keys:
+            if self.order_item_cell_state[key][0]["shelve"] == location["shelve"] and self.order_item_cell_state[key][0][
+                "row_location"] == location["row_location"] and self.order_item_cell_state[key][0]["column_location"] == location["column_location"]:
+                self.order_item_light_state[key] = False
+                send_cell_signal(arduino=self.arduino, module= location["module_id"], quantity= 0, mode=LIGHT_MODE["OFF"])
+        self.load_right_layout()
+
+    def ptl_function(self):
+        order_item_ids = self.order_item_light_state.keys()
+        for order_item_id in order_item_ids:
+            self.order_item_light_state[order_item_id] = True
+            send_cell_signal(
+                self.arduino,
+                self.order_item_cell_state[order_item_id][0]["module_id"],
+                self.order_item_cell_state[order_item_id][0]["quantity"],
+                LIGHT_MODE["ON"]
+            )
+        self.load_right_layout()
+
 
     def make_spacer(self):
         spacer = QLabel("")
